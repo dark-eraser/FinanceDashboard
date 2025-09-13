@@ -24,7 +24,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Finance Dashboard: ZKB & Revolut")
+st.title("Finance Dashboard")
 
 # --- Load ZKB ---
 
@@ -55,13 +55,12 @@ revolut["Amount"] = pd.to_numeric(revolut["Amount"], errors="coerce").fillna(0)
 revolut["Category"] = revolut["Description"].apply(categorize_transaction)
 revolut["Spending"] = revolut["Amount"].apply(lambda x: abs(x) if x < 0 else 0)
 revolut["Income"] = revolut["Amount"].apply(lambda x: x if x > 0 else 0)
-revolut_eur = revolut[revolut["Currency"] == "EUR"]
 
 
 # --- Sidebar Filters ---
 account = st.sidebar.selectbox("Account", ["ZKB", "Revolut"])
 years_zkb = zkb["Date"].dt.year.astype(str).unique().tolist()
-years_revolut = revolut_eur["Completed Date"].dt.year.astype(str).unique().tolist()
+years_revolut = revolut["Completed Date"].dt.year.astype(str).unique().tolist()
 years = sorted(list(set(years_zkb + years_revolut)), reverse=True)
 years.insert(0, "All")
 year = st.sidebar.selectbox("Year", years, index=0)
@@ -94,11 +93,9 @@ if account == "ZKB":
     df = df[df["Category"].isin(selected_categories)]
 else:
     if year == "All":
-        df = revolut_eur.copy()
+        df = revolut.copy()
     else:
-        df = revolut_eur[
-            revolut_eur["Completed Date"].dt.year.astype(str) == year
-        ].copy()
+        df = revolut[revolut["Completed Date"].dt.year.astype(str) == year].copy()
     # Always recalculate category and merchant columns after filtering
     df["Category"] = df["Description"].apply(categorize_transaction)
     df["Merchant"] = df["Description"].apply(extract_merchant_from_revolut)
@@ -128,8 +125,10 @@ if account == "ZKB":
         f'{" / " + month if month != "All" else ""}'
     )
     st.header(header_text)
+    df_display = df.copy()
+    df_display["Currency"] = "CHF"
     st.dataframe(
-        df[
+        df_display[
             [
                 "Date",
                 "Booking text",
@@ -138,6 +137,7 @@ if account == "ZKB":
                 "Merchant/Use",
                 "Debit CHF",
                 "Credit CHF",
+                "Currency",
             ]
         ]
     )
@@ -178,20 +178,30 @@ if account == "ZKB":
     st.pyplot(fig)
 else:
     header_text = (
-        f'Revolut Account (EUR) - {year if year != "All" else "All Years"}'
+        f'Revolut Account - {year if year != "All" else "All Years"}'
         f'{" / " + month if month != "All" else ""}'
     )
     st.header(header_text)
     df["Merchant"] = df["Description"].apply(extract_merchant_from_revolut)
+    df_display = df.copy()
     st.dataframe(
-        df[["Completed Date", "Description", "Category", "Merchant", "Amount"]]
+        df_display[
+            [
+                "Completed Date",
+                "Description",
+                "Category",
+                "Merchant",
+                "Amount",
+                "Currency",
+            ]
+        ]
     )
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Total Spending", f"{df['Spending'].sum():,.2f} EUR")
+        st.metric("Total Spending", f"{df['Spending'].sum():,.2f} (mixed)")
     with col2:
-        st.metric("Total Income", f"{df['Income'].sum():,.2f} EUR")
+        st.metric("Total Income", f"{df['Income'].sum():,.2f} (mixed)")
     st.markdown("---")
     st.subheader("Spending by Category")
     fig, ax = plt.subplots(figsize=(10, 4))
