@@ -66,7 +66,14 @@ CATEGORY_KEYWORDS = {
         "sncf",
         "ratp",
     ],
-    "Bank Transfer": ["transfer", "account transfer", "sepa", "wire", "überweisung"],
+    "Bank Transfer": [
+        "transfer",
+        "account transfer",
+        "sepa",
+        "wire",
+        "überweisung",
+        "payment from",
+    ],
     "Mobile Transfer": ["twint"],
     "Standing Order": ["standing order"],
     "Fee": ["fee", "charge", "gebühr"],
@@ -90,9 +97,13 @@ def categorize_transaction(text):
     # Remove means of payment prefix if present
     if ":" in text_l:
         text_l = text_l.split(":", 1)[1].strip()
+    # Special rule: if contains 'balance migration'
+    # or 'exchanged to' after prefix removal
+    if "balance migration" in text_l or "exchanged to" in text_l:
+        return "Uncounted"
     # Special rule: if contains 'revolut' and is a standing order
     if "revolut" in text_l and "standing order" in text_l:
-        return "Uncounted (Revolut Standing Order)"
+        return "Uncounted"
     # Special rule: if matches vault transaction (e.g. 'To pocket CHF TABLET from CHF')
     if ("to pocket" in text_l or "to vault" in text_l) and "from chf" in text_l:
         return "Vault"

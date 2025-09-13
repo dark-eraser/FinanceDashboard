@@ -47,10 +47,3 @@ repos:
   #   hooks:
   #     - id: mypy
   #       additional_dependencies: [types-requests]
-
-  # Documentation
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        args: [--convention=google]
