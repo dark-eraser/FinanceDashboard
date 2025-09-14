@@ -30,6 +30,7 @@ CATEGORY_KEYWORDS = {
         "pizza",
         "kebab",
         "dining",
+        "resto",
     ],
     "Salary": ["salary", "eraneos", "payroll", "lohn"],
     "Shopping": [
@@ -65,6 +66,7 @@ CATEGORY_KEYWORDS = {
         "train",
         "sncf",
         "ratp",
+        "bookaway" "rentcars",
     ],
     "Bank Transfer": [
         "transfer",
@@ -72,6 +74,7 @@ CATEGORY_KEYWORDS = {
         "sepa",
         "wire",
         "überweisung",
+        "revolut france, succursale de revolut bank uab",
         "payment from",
     ],
     "Mobile Transfer": ["twint"],
@@ -91,10 +94,8 @@ def categorize_transaction(text):
         str: The category of the transaction.
     """
     text_l = str(text).lower()
-    # Special rule: if contains 'credit' in the title, categorize as 'Refund'
     if "credit" in text_l:
         return "Refund"
-    # Remove means of payment prefix if present
     if ":" in text_l:
         text_l = text_l.split(":", 1)[1].strip()
     # Special rule: if contains 'balance migration'
@@ -107,19 +108,16 @@ def categorize_transaction(text):
     # Special rule: if matches vault transaction (e.g. 'To pocket CHF TABLET from CHF')
     if ("to pocket" in text_l or "to vault" in text_l) and "from chf" in text_l:
         return "Vault"
-    # 1. Keyword match
     for category, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
             if kw in text_l:
                 return category
-    # 2. spaCy entity match
     doc = nlp(text_l)
     for ent in doc.ents:
         for category, keywords in CATEGORY_KEYWORDS.items():
             for kw in keywords:
                 if kw in ent.text:
                     return category
-    # 3. Fallback
     return "Other"
 
 
@@ -136,7 +134,6 @@ def extract_merchant_from_revolut(description):
     for ent in doc.ents:
         if ent.label_ in ["ORG", "PERSON", "GPE", "LOC"]:
             return ent.text
-    # Fallback: return first capitalized word or first word
     words = [w for w in str(description).split() if w.istitle()]
     if words:
         return words[0]
