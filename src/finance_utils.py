@@ -75,6 +75,7 @@ CATEGORY_KEYWORDS = {
         "wire",
         "überweisung",
         "revolut france, succursale de revolut bank uab",
+        "payment from",
     ],
     "Mobile Transfer": ["twint"],
     "Standing Order": ["standing order"],
