@@ -30,6 +30,7 @@ CATEGORY_KEYWORDS = {
         "pizza",
         "kebab",
         "dining",
+        "resto",
     ],
     "Salary": ["salary", "eraneos", "payroll", "lohn"],
     "Shopping": [
@@ -65,8 +66,16 @@ CATEGORY_KEYWORDS = {
         "train",
         "sncf",
         "ratp",
+        "bookaway" "rentcars",
     ],
-    "Bank Transfer": ["transfer", "account transfer", "sepa", "wire", "überweisung"],
+    "Bank Transfer": [
+        "transfer",
+        "account transfer",
+        "sepa",
+        "wire",
+        "überweisung",
+        "revolut france, succursale de revolut bank uab",
+    ],
     "Mobile Transfer": ["twint"],
     "Standing Order": ["standing order"],
     "Fee": ["fee", "charge", "gebühr"],
@@ -89,7 +98,9 @@ def categorize_transaction(text):
     if ":" in text_l:
         text_l = text_l.split(":", 1)[1].strip()
     if "revolut" in text_l and "standing order" in text_l:
-        return "Uncounted (Revolut Standing Order)"
+        return "Uncounted"
+    if "exchanged to" in text_l or "balance migration" in text_l:
+        return "Uncounted"
     if ("to pocket" in text_l or "to vault" in text_l) and "from chf" in text_l:
         return "Vault"
     for category, keywords in CATEGORY_KEYWORDS.items():
