@@ -1,10 +1,28 @@
-"""Finance utility functions for transaction categorization and processing."""
+import os
+
+import pandas as pd
 import spacy
+
+"""Finance utility functions for transaction categorization and processing."""
 
 nlp = spacy.load("en_core_web_sm")
 
 CATEGORY_KEYWORDS = {
-    "Groceries": ["coop", "migros", "aldi", "lidl", "denner", "supermarket", "grocery"],
+    "Groceries": [
+        "coop",
+        "migros",
+        "aldi",
+        "lidl",
+        "denner",
+        "supermarket",
+        "grocery",
+        "carrefour",
+        "migrolino",
+        "coop to go",
+        "volg",
+        "edeka",
+        "franprix",
+    ],
     "Transport": [
         "sbb",
         "vbz",
@@ -15,10 +33,7 @@ CATEGORY_KEYWORDS = {
         "taxi",
         "easyr",
         "easyrider",
-        "bahn",
-        "sncf",
         "ratp",
-        "bp",
     ],
     "Insurance": ["sanitas", "axa", "versicherung", "insurance"],
     "Dining": [
@@ -31,6 +46,30 @@ CATEGORY_KEYWORDS = {
         "kebab",
         "dining",
         "resto",
+        "steakhouse",
+        "le crobag",
+        "burger king",
+        "selecta",
+        "orient world",
+        "paul",
+        "relay",
+        "toogoodtogo",
+        "too good to go",
+        "vending machine",
+        "sv group",
+        "Gletscherrest.",
+        "asiaway",
+        "buchmann",
+        "gelati",
+        "nooba",
+        "rice up",
+        "nordbrücke",
+        "amboss rampe",
+        "les halles",
+        "tiny fish",
+        "monocle",
+        "glace",
+        "gelateria",
     ],
     "Salary": ["salary", "eraneos", "payroll", "lohn"],
     "Shopping": [
@@ -41,6 +80,13 @@ CATEGORY_KEYWORDS = {
         "store",
         "shop",
         "boutique",
+        "hm",
+        "jumbo",
+        "blattner",
+        "fnac",
+        "brocki-land",
+        "aliexpress",
+        "amazon",
     ],
     "Utilities": [
         "swisscom",
@@ -52,9 +98,23 @@ CATEGORY_KEYWORDS = {
         "water",
         "gas",
         "utility",
+        "apple",
+        "swiss post",
+        "www.1global.com",
     ],
-    "Parking": ["parking", "park", "parkingpay"],
-    "Health": ["pharmacy", "apotheke", "doctor", "arzt", "hospital", "clinic"],
+    "Car": ["garage", "parking", "park", "parkingpay"],
+    "Health": [
+        "pharmacy",
+        "apotheke",
+        "doctor",
+        "arzt",
+        "hospital",
+        "clinic",
+        "dm",
+        "dr",
+        "Centre Ophtalmol",
+        "coiffure",
+    ],
     "Travel": [
         "hotel",
         "hostel",
@@ -64,9 +124,21 @@ CATEGORY_KEYWORDS = {
         "airline",
         "bahn",
         "train",
+        "bookaway",
+        "rentcars",
+        "easyjet",
+        "autostrade",
+        "titls rotair",
+        "bahn",
         "sncf",
-        "ratp",
-        "bookaway" "rentcars",
+        "bp",
+        "shell",
+        "socar",
+        "iberia",
+        "benzin discount",
+        "alpes recepcion",
+        "edelweiss",
+        "esso",
     ],
     "Bank Transfer": [
         "transfer",
@@ -76,10 +148,45 @@ CATEGORY_KEYWORDS = {
         "überweisung",
         "revolut france, succursale de revolut bank uab",
         "payment from",
+        "top-up",
     ],
-    "Mobile Transfer": ["twint"],
+    "Investment": ["degen", "crypto", "coinbase", "binance", "investment", "etoro"],
+    "Leisure": [
+        "cinema",
+        "theater",
+        "concert",
+        "event",
+        "leisure",
+        "museo",
+        "museum",
+        "steam",
+        "gotcourts",
+        "kunsthaus",
+        "disney+",
+        "yoga",
+        "ground news",
+        "kobo",
+        "audible",
+        "netflix",
+        "spotify",
+        "hallenbad",
+    ],
     "Standing Order": ["standing order"],
     "Fee": ["fee", "charge", "gebühr"],
+    "Cash Withdrawal": [
+        "atm",
+        "cash withdrawal",
+        "geldautomat",
+        "bankomat",
+        "cajero",
+        "bancomat",
+    ],
+    "Work": ["isc2"],
+    "Uncounted": ["balance migration", "exchanged to"],
+    "Vault": ["pocket", "vault", "pocket withdrawal"],
+    "Refund": ["refund", "credit"],
+    "Rent": ["rent", "miete", "immobilien"],
+    "Donation": ["pro infirmis"],
     "Other": [],
 }
 
@@ -94,20 +201,9 @@ def categorize_transaction(text):
         str: The category of the transaction.
     """
     text_l = str(text).lower()
-    if "credit" in text_l:
-        return "Refund"
     if ":" in text_l:
         text_l = text_l.split(":", 1)[1].strip()
-    # Special rule: if contains 'balance migration'
-    # or 'exchanged to' after prefix removal
-    if "balance migration" in text_l or "exchanged to" in text_l:
-        return "Uncounted"
-    # Special rule: if contains 'revolut' and is a standing order
-    if "revolut" in text_l and "standing order" in text_l:
-        return "Uncounted"
-    # Special rule: if matches vault transaction (e.g. 'To pocket CHF TABLET from CHF')
-    if ("to pocket" in text_l or "to vault" in text_l) and "from chf" in text_l:
-        return "Vault"
+
     for category, keywords in CATEGORY_KEYWORDS.items():
         for kw in keywords:
             if kw in text_l:
@@ -193,3 +289,62 @@ def extract_means_and_merchant(text):
             merchant = known.capitalize()
             break
     return means, merchant
+
+
+def save_categorized_transactions(df, account_name, filename=None):
+    """
+    Save categorized transactions to a CSV file.
+    Args:
+        df (pd.DataFrame): DataFrame with transactions and categories.
+        account_name (str): 'revolut' or 'zkb' (used in filename if not provided).
+        filename (str, optional): Custom filename. If None, uses default pattern.
+    """
+    if filename is None:
+        filename = f"categorized_{account_name.lower()}.csv"
+    # Save all columns, or select a subset if you prefer
+    df.to_csv(filename, index=False)
+
+
+def classify_other_transactions_with_spacy(
+    input_csv, output_csv=None, text_column="Description"
+):
+    """
+    Load transactions from a CSV (assumed to be uncategorized).
+    use spaCy to classify them, and save the result.
+    Args:
+        input_csv (str): Path to the CSV file with uncategorized transactions.
+        output_csv (str, optional): Path to save the classified CSV.
+        If None, appends '_spacy' to input filename.
+        text_column (str): The column containing the transaction description.
+    Returns:
+        pd.DataFrame: The DataFrame with new categories.
+    """
+    import pandas as pd
+
+    df = pd.read_csv(input_csv)
+    df["Category_spacy"] = df[text_column].apply(lambda x: categorize_transaction(x))
+    if output_csv is None:
+        output_csv = input_csv.replace(".csv", "_spacy.csv")
+    df.to_csv(output_csv, index=False)
+    return df
+
+
+if __name__ == "__main__":
+    # Example: Load and save categorized ZKB transactions
+    if os.path.exists("data/zkb_statement_202509.csv"):
+        zkb = pd.read_csv(
+            "data/zkb_statement_202509.csv",
+            sep=";",
+            decimal=".",
+            thousands=",",
+            dayfirst=True,
+        )
+        if "Category" not in zkb.columns:
+            zkb["Category"] = zkb["Booking text"].apply(categorize_transaction)
+        save_categorized_transactions(zkb, "zkb")
+    # Example: Load and save categorized Revolut transactions
+    if os.path.exists("data/revolut_statement_202509.csv"):
+        revolut = pd.read_csv("data/revolut_statement_202509.csv")
+        if "Category" not in revolut.columns:
+            revolut["Category"] = revolut["Description"].apply(categorize_transaction)
+        save_categorized_transactions(revolut, "revolut")

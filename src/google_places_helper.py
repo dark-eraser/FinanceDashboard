@@ -61,4 +61,4 @@ def get_place_types(merchant_name, api_key=None):
     return result.get("types", [])
 
 
-print(get_place_types("Starbucks"))
+# print(get_place_types("Starbucks"))
