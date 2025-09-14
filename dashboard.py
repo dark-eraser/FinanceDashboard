@@ -5,7 +5,6 @@ import seaborn as sns
 import streamlit as st
 
 from src.finance_utils import (
-    categorize_transaction,
     extract_means_and_merchant,
     extract_merchant_from_revolut,
 )
@@ -29,9 +28,15 @@ st.title("Finance Dashboard")
 # --- Load ZKB ---
 
 zkb = pd.read_csv(
-    "data/zkb_statement_202509.csv", sep=";", decimal=".", thousands=",", dayfirst=True
+    "data/categorized_zkb_statement_202509_flat.csv",
+    sep=";",
+    decimal=".",
+    thousands=",",
+    dayfirst=True,
 )
-zkb["Date"] = pd.to_datetime(zkb["Date"], format="%d.%m.%Y")
+zkb["Date"] = pd.to_datetime(
+    zkb["Date"], format="mixed", dayfirst=True, errors="coerce"
+)
 zkb["Month"] = zkb["Date"].dt.to_period("M")
 zkb["Debit CHF"] = pd.to_numeric(
     zkb["Debit CHF"].astype(str).str.replace(",", ""), errors="coerce"
@@ -39,7 +44,7 @@ zkb["Debit CHF"] = pd.to_numeric(
 zkb["Credit CHF"] = pd.to_numeric(
     zkb["Credit CHF"].astype(str).str.replace(",", ""), errors="coerce"
 ).fillna(0)
-zkb["Category"] = zkb["Booking text"].apply(categorize_transaction)
+# zkb["Category"] = zkb["Category"].apply(categorize_transaction)
 zkb[["Means of Payment", "Merchant/Use"]] = zkb["Booking text"].apply(
     lambda x: pd.Series(extract_means_and_merchant(x))
 )
@@ -48,11 +53,13 @@ zkb["Income"] = zkb["Credit CHF"]
 
 # --- Load Revolut ---
 
-revolut = pd.read_csv("data/revolut_statement_202509.csv")
-revolut["Completed Date"] = pd.to_datetime(revolut["Completed Date"])
+revolut = pd.read_csv("data/categorized_revolut_statement_202509.csv")
+revolut["Completed Date"] = pd.to_datetime(
+    revolut["Completed Date"], format="mixed", errors="coerce", dayfirst=True
+)
 revolut["Month"] = revolut["Completed Date"].dt.to_period("M")
 revolut["Amount"] = pd.to_numeric(revolut["Amount"], errors="coerce").fillna(0)
-revolut["Category"] = revolut["Description"].apply(categorize_transaction)
+# revolut["Category"] = revolut["Category"].apply(categorize_transaction)
 revolut["Spending"] = revolut["Amount"].apply(lambda x: abs(x) if x < 0 else 0)
 revolut["Income"] = revolut["Amount"].apply(lambda x: x if x > 0 else 0)
 
@@ -71,7 +78,7 @@ if account == "ZKB":
     else:
         df = zkb[zkb["Date"].dt.year.astype(str) == year].copy()
     # Always recalculate category and merchant columns after filtering
-    df["Category"] = df["Booking text"].apply(categorize_transaction)
+    # df["Category"] = df["Booking text"].apply(categorize_transaction)
     df[["Means of Payment", "Merchant/Use"]] = df["Booking text"].apply(
         lambda x: pd.Series(extract_means_and_merchant(x))
     )
@@ -97,7 +104,7 @@ else:
     else:
         df = revolut[revolut["Completed Date"].dt.year.astype(str) == year].copy()
     # Always recalculate category and merchant columns after filtering
-    df["Category"] = df["Description"].apply(categorize_transaction)
+    # df["Category"] = df["Description"].apply(categorize_transaction)
     df["Merchant"] = df["Description"].apply(extract_merchant_from_revolut)
     months = sorted(df["Month"].astype(str).unique(), reverse=True)
     months.insert(0, "All")

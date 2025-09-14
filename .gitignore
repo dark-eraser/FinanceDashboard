@@ -140,3 +140,4 @@ data/processed/
 data/external/
 logs/
 .DS_Store
+creds.json
