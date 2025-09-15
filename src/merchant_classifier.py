@@ -3,8 +3,8 @@ import os
 
 import pandas as pd
 
-from src.finance_utils import CATEGORY_KEYWORDS
-from src.google_places_helper import get_place_types
+from finance_utils import CATEGORY_KEYWORDS
+from google_places_helper import get_place_types
 
 MAPPING_FILE = "merchant_category_mapping.json"
 
@@ -102,7 +102,7 @@ def classify_merchants_with_hybrid(csv_file, merchant_col="Merchant"):
 
 
 if __name__ == "__main__":
-    data_folder = "data"
+    data_folder = "../data"
     for fname in os.listdir(data_folder):
         if fname.endswith(".csv"):
             print(f"\nProcessing {fname}")

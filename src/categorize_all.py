@@ -3,10 +3,10 @@ import os
 
 import pandas as pd
 
-from src.finance_utils import CATEGORY_KEYWORDS
+from finance_utils import CATEGORY_KEYWORDS
 
 MAPPING_FILE = "merchant_category_mapping.json"
-DATA_FOLDER = "data"
+DATA_FOLDER = "../data"
 OUTPUT_PREFIX = "categorized_"
 
 # Load mapping

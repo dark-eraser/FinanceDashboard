@@ -5,7 +5,7 @@ import streamlit as st
 
 from src.finance_utils import extract_means_and_merchant, extract_merchant_from_revolut
 
-st.title("By Month Spending Comparison")
+st.title("By Month Income Comparison")
 
 # --- Load ZKB ---
 zkb = pd.read_csv(
@@ -69,7 +69,6 @@ else:
     months = sorted(df["Month"].astype(str).unique(), reverse=True)
     months = [m for m in months if m not in ("All", "NaT", None, "", pd.NaT)]
 
-
 if len(months) < 2:
     st.warning("Not enough months to compare.")
     st.stop()
@@ -89,31 +88,31 @@ df2 = df[df["Month"].astype(str) == month2]
 
 col1, col2 = st.columns(2)
 with col1:
-    st.subheader(f"Spending in {month1}")
-    st.metric("Total Spending", f"{df1['Spending'].sum():,.2f}")
-    cat1 = df1.groupby("Category")["Spending"].sum().sort_values(ascending=False)
+    st.subheader(f"Income in {month1}")
+    st.metric("Total Income", f"{df1['Income'].sum():,.2f}")
+    cat1_income = df1.groupby("Category")["Income"].sum().sort_values(ascending=False)
     fig1, ax1 = plt.subplots(figsize=(6, 3))
-    sns.barplot(x=cat1.index, y=cat1.values, ax=ax1, palette="Blues_d")
-    ax1.set_ylabel("Spending")
+    sns.barplot(x=cat1_income.index, y=cat1_income.values, ax=ax1, palette="Greens_d")
+    ax1.set_ylabel("Income")
     ax1.set_xlabel("Category")
     plt.xticks(rotation=30, ha="right")
     st.pyplot(fig1)
 with col2:
-    st.subheader(f"Spending in {month2}")
-    st.metric("Total Spending", f"{df2['Spending'].sum():,.2f}")
-    cat2 = df2.groupby("Category")["Spending"].sum().sort_values(ascending=False)
+    st.subheader(f"Income in {month2}")
+    st.metric("Total Income", f"{df2['Income'].sum():,.2f}")
+    cat2_income = df2.groupby("Category")["Income"].sum().sort_values(ascending=False)
     fig2, ax2 = plt.subplots(figsize=(6, 3))
-    sns.barplot(x=cat2.index, y=cat2.values, ax=ax2, palette="Oranges_d")
-    ax2.set_ylabel("Spending")
+    sns.barplot(x=cat2_income.index, y=cat2_income.values, ax=ax2, palette="Purples_d")
+    ax2.set_ylabel("Income")
     ax2.set_xlabel("Category")
     plt.xticks(rotation=30, ha="right")
     st.pyplot(fig2)
 st.markdown("---")
-st.subheader("Category Comparison Table")
-cat_compare = pd.DataFrame(
+st.subheader("Category Income Comparison Table")
+cat_income_compare = pd.DataFrame(
     {
-        month1: df1.groupby("Category")["Spending"].sum(),
-        month2: df2.groupby("Category")["Spending"].sum(),
+        month1: df1.groupby("Category")["Income"].sum(),
+        month2: df2.groupby("Category")["Income"].sum(),
     }
 ).fillna(0)
-st.dataframe(cat_compare)
+st.dataframe(cat_income_compare)

@@ -184,7 +184,7 @@ CATEGORY_KEYWORDS = {
     "Work": ["isc2"],
     "Uncounted": ["balance migration", "exchanged to"],
     "Vault": ["pocket", "vault", "pocket withdrawal"],
-    "Refund": ["refund", "credit"],
+    "Refund": ["refund"],
     "Rent": ["rent", "miete", "immobilien"],
     "Donation": ["pro infirmis"],
     "Other": [],
