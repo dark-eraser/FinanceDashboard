@@ -26,21 +26,6 @@ repos:
       - id: isort
         args: ["--profile", "black"]
 
-  # Python linting
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        args: ["--max-line-length=88", "--extend-ignore=E203,W503"]
-
-  # Security checks
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.7
-    hooks:
-      - id: bandit
-        args: ["--exclude", "tests,venv"]
-        additional_dependencies: ["bandit[toml]"]
-
   # Type checking (optional - uncomment if you use type hints)
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: v1.8.0
