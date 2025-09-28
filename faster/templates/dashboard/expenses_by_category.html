@@ -1,87 +1,93 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <h2>Expenses by Category</h2>
 <div>
-    <canvas id="categoryChart" width="400" height="200"></canvas>
+  <canvas id="categoryChart" width="400" height="200"></canvas>
 </div>
 
-<button type="button" onclick="toggleTransactionTable()" style="margin-top:20px;">Show/Hide All Transactions</button>
-<div id="transactionTableContainer" style="display:none; margin-top:10px;">
-    <table border="1" style="border-collapse:collapse;">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for tx in transactions %}
-            <tr>
-                <td>{{ tx.Date }}</td>
-                <td>{{ tx.Booking_text }}</td>
-                <td>{{ tx.Category }}</td>
-                <td>{{ tx.Amount }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<button
+  type="button"
+  onclick="toggleTransactionTable()"
+  style="margin-top: 20px"
+>
+  Show/Hide All Transactions
+</button>
+<div id="transactionTableContainer" style="display: none; margin-top: 10px">
+  <table border="1" style="border-collapse: collapse">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Category</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in transactions %}
+      <tr>
+        <td>{{ tx.Date }}</td>
+        <td>{{ tx.Booking_text }}</td>
+        <td>{{ tx.Category }}</td>
+        <td>{{ tx.Amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
-<button type="button" onclick="toggleTable()" style="margin-top:20px;">Show/Hide Table</button>
-<div id="categoryTableContainer" style="display:none; margin-top:10px;">
-    <table border="1" cellpadding="6" style="border-collapse:collapse;">
-        <thead>
-            <tr>
-                <th>Category</th>
-                <th>Total Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for cat, amt in category_table %}
-            <tr>
-                <td>{{ cat }}</td>
-                <td>{{ amt }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<button type="button" onclick="toggleTable()" style="margin-top: 20px">
+  Show/Hide Table
+</button>
+<div id="categoryTableContainer" style="display: none; margin-top: 10px">
+  <table border="1" cellpadding="6" style="border-collapse: collapse">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Total Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat, amt in category_table %}
+      <tr>
+        <td>{{ cat }}</td>
+        <td>{{ amt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const labels = {{ labels|safe }};
-    const data = {
-            labels: labels,
-            datasets: [{
-                    label: 'Expenses by Category',
-                    data: {{ amounts|safe }},
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-            }]
-    };
-    const config = {
-            type: 'bar',
-            data: data,
-            options: {
-                    scales: {
-                            y: { beginAtZero: true }
-                    }
-            }
-    };
-    new Chart(document.getElementById('categoryChart'), config);
+  const labels = {{ labels|safe }};
+  const data = {
+          labels: labels,
+          datasets: [{
+                  label: 'Expenses by Category',
+                  data: {{ amounts|safe }},
+                  backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                  borderColor: 'rgba(255, 99, 132, 1)',
+                  borderWidth: 1
+          }]
+  };
+  const config = {
+          type: 'bar',
+          data: data,
+          options: {
+                  scales: {
+                          y: { beginAtZero: true }
+                  }
+          }
+  };
+  new Chart(document.getElementById('categoryChart'), config);
 
-    function toggleTable() {
-        var el = document.getElementById('categoryTableContainer');
-        el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-    }
+  function toggleTable() {
+      var el = document.getElementById('categoryTableContainer');
+      el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+  }
 
-    function toggleTransactionTable() {
-    var el = document.getElementById('transactionTableContainer');
-    el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-    }
+  function toggleTransactionTable() {
+  var el = document.getElementById('transactionTableContainer');
+  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+  }
 </script>
 {% endblock %}
