@@ -1,3 +1,40 @@
+def expenses_by_category(request):
+    transactions = request.session.get("transactions", [])
+    from collections import defaultdict
+
+    category_totals = defaultdict(float)
+    for tx in transactions:
+        category = tx.get("Category", "Unknown")
+        amount_str = tx.get("Amount", "0")
+        try:
+            # Remove commas, spaces, and handle empty/invalid values
+            amount_clean = amount_str.replace(",", "").strip()
+            amount = (
+                float(amount_clean)
+                if amount_clean and amount_clean.lower() != "nan"
+                else 0.0
+            )
+        except Exception:
+            amount = 0.0
+        category_totals[category] += amount
+    labels = list(category_totals.keys())
+    amounts = list(category_totals.values())
+    import json
+
+    # Prepare table data for template
+    category_table = zip(labels, amounts)
+    return render(
+        request,
+        "dashboard/expenses_by_category.html",
+        {
+            "labels": json.dumps(labels),
+            "amounts": json.dumps(amounts),
+            "category_table": category_table,
+            "transactions": transactions,
+        },
+    )
+
+
 import pandas as pd
 from django.http import HttpResponse
 from django.shortcuts import render
