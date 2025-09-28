@@ -1,12 +1,19 @@
 def expenses_by_category(request):
     from .models import Transaction, UploadedFile
 
-    file_id = request.GET.get("file")
+    file_ids = request.GET.getlist("file")
     files = UploadedFile.objects.all().order_by("-uploaded_at")
-    if file_id:
-        transactions_qs = Transaction.objects.filter(uploaded_file_id=file_id)
-    else:
-        transactions_qs = Transaction.objects.all()
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    qs = Transaction.objects.all()
+    if file_ids:
+        qs = qs.filter(uploaded_file_id__in=file_ids)
+    # Filter by date range if provided
+    if start_date:
+        qs = qs.filter(date__gte=start_date)
+    if end_date:
+        qs = qs.filter(date__lte=end_date)
+    transactions_qs = qs
     transactions = [
         {
             "Date": t.date,
@@ -39,6 +46,11 @@ def expenses_by_category(request):
     amounts = list(category_totals.values())
     import json
 
+    # Prepare filtered category totals for JS (exclude 'Uncounted')
+    filtered_category_totals = {
+        k: v for k, v in category_totals.items() if k != "Uncounted"
+    }
+
     # Prepare table data for template
     category_table = zip(labels, amounts)
     return render(
@@ -50,6 +62,11 @@ def expenses_by_category(request):
             "category_table": category_table,
             "transactions": transactions,
             "files": files,
+            "selected_file_ids": [str(fid) for fid in file_ids],
+            "start_date": start_date,
+            "end_date": end_date,
+            "filtered_category_totals": filtered_category_totals,
+            "filtered_category_totals_json": json.dumps(filtered_category_totals),
         },
     )
 

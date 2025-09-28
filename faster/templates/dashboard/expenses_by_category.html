@@ -1,103 +1,165 @@
 {% extends "base.html" %}
 {% block content %}
-<form method="get" style="margin-bottom:20px;">
-  <label for="file">Select datasource:</label>
-  <select name="file" id="file" onchange="this.form.submit()">
-    <option value="">All files</option>
-    {% for f in files %}
-      <option value="{{ f.id }}" {% if request.GET.file == f.id|stringformat:'s' %}selected{% endif %}>{{ f.name }}</option>
-    {% endfor %}
-  </select>
-</form>
-<h2>Expenses by Category</h2>
-<div>
-  <canvas id="categoryChart" width="400" height="200"></canvas>
-</div>
-
-<button
-  type="button"
-  onclick="toggleTransactionTable()"
-  style="margin-top: 20px"
->
-  Show/Hide All Transactions
-</button>
-<div id="transactionTableContainer" style="display: none; margin-top: 10px">
-  <table border="1" style="border-collapse: collapse">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Description</th>
-        <th>Category</th>
-        <th>Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for tx in transactions %}
-      <tr>
-        <td>{{ tx.Date }}</td>
-        <td>{{ tx.Booking_text }}</td>
-        <td>{{ tx.Category }}</td>
-        <td>{{ tx.Amount }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<button type="button" onclick="toggleTable()" style="margin-top: 20px">
-  Show/Hide Table
-</button>
-<div id="categoryTableContainer" style="display: none; margin-top: 10px">
-  <table border="1" cellpadding="6" style="border-collapse: collapse">
-    <thead>
-      <tr>
-        <th>Category</th>
-        <th>Total Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for cat, amt in category_table %}
-      <tr>
-        <td>{{ cat }}</td>
-        <td>{{ amt }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const labels = {{ labels|safe }};
-  const data = {
-          labels: labels,
-          datasets: [{
-                  label: 'Expenses by Category',
-                  data: {{ amounts|safe }},
-                  backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                  borderColor: 'rgba(255, 99, 132, 1)',
-                  borderWidth: 1
-          }]
-  };
-  const config = {
-          type: 'bar',
-          data: data,
-          options: {
-                  scales: {
-                          y: { beginAtZero: true }
-                  }
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">Expenses by Category</h2>
+    <form method="get" id="datasource-form" class="mb-4">
+      <div class="form-group mb-2">
+        <label>Select Data Sources:</label>
+        <div id="datasource-checkboxes" class="d-flex flex-wrap">
+          {% for file in files %}
+            <div class="form-check me-3">
+              <input class="form-check-input datasource-filter" type="checkbox" name="file" value="{{ file.id }}" id="ds-{{ forloop.counter }}" {% if file.id|stringformat:'s' in selected_file_ids %}checked{% endif %}>
+              <label class="form-check-label" for="ds-{{ forloop.counter }}">{{ file.name }}</label>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group mb-2 d-flex flex-row align-items-end">
+        <div class="me-3">
+          <label for="start_date">Start Date:</label>
+          <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|default:'' }}">
+        </div>
+        <div class="me-3">
+          <label for="end_date">End Date:</label>
+          <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|default:'' }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Update Dashboard</button>
+      </div>
+    </form>
+    <div class="row justify-content-center align-items-start mb-4">
+      <div class="col-md-8 d-flex flex-column align-items-center">
+        <canvas id="categoryChart" style="max-width: 100%; height: 400px;"></canvas>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">Show Categories</div>
+          <div class="card-body" id="category-checkboxes">
+            {% for category, total in filtered_category_totals.items %}
+              <div class="form-check">
+                <input class="form-check-input category-filter" type="checkbox" value="{{ category }}" id="cat-{{ forloop.counter }}" checked>
+                <label class="form-check-label" for="cat-{{ forloop.counter }}">{{ category }}</label>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="accordion" id="dashboardAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingTotals">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTotals" aria-expanded="true" aria-controls="collapseTotals">
+            Category Totals
+          </button>
+        </h2>
+        <div id="collapseTotals" class="accordion-collapse collapse show" aria-labelledby="headingTotals" data-bs-parent="#dashboardAccordion">
+          <div class="accordion-body">
+            <table class="table table-bordered" id="category-totals-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for category, total in filtered_category_totals.items %}
+                  <tr data-category="{{ category }}">
+                    <td>{{ category }}</td>
+                    <td>{{ total|floatformat:2 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingTransactions">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransactions" aria-expanded="false" aria-controls="collapseTransactions">
+            Transactions
+          </button>
+        </h2>
+        <div id="collapseTransactions" class="accordion-collapse collapse" aria-labelledby="headingTransactions" data-bs-parent="#dashboardAccordion">
+          <div class="accordion-body">
+            <table class="table table-striped" id="transactions-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tx in transactions %}
+                  {% if tx.Category != 'Uncounted' %}
+                    <tr data-category="{{ tx.Category }}">
+                      <td>{{ tx.Date }}</td>
+                      <td>{{ tx.Booking_text }}</td>
+                      <td>{{ tx.Amount|floatformat:2 }}</td>
+                      <td>{{ tx.Category }}</td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Bootstrap 5 Accordion JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Filter table and chart by selected categories
+    document.querySelectorAll('.category-filter').forEach(function(checkbox) {
+      checkbox.addEventListener('change', function() {
+        const checkedCategories = Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
+        // Table rows
+        document.querySelectorAll('#category-totals-table tbody tr').forEach(function(row) {
+          if (checkedCategories.includes(row.getAttribute('data-category'))) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
           }
-  };
-  new Chart(document.getElementById('categoryChart'), config);
+        });
+        document.querySelectorAll('#transactions-table tbody tr').forEach(function(row) {
+          if (checkedCategories.includes(row.getAttribute('data-category'))) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        // Chart update
+        updateChart(checkedCategories);
+      });
+    });
 
-  function toggleTable() {
-      var el = document.getElementById('categoryTableContainer');
-      el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-  }
-
-  function toggleTransactionTable() {
-  var el = document.getElementById('transactionTableContainer');
-  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-  }
-</script>
+  // Chart.js setup
+  const categoryTotals = JSON.parse('{{ filtered_category_totals_json|safe|escapejs }}');
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    let chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(categoryTotals),
+        datasets: [{
+          label: 'Total by Category',
+          data: Object.values(categoryTotals),
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+    function updateChart(categories) {
+      chart.data.labels = categories;
+      chart.data.datasets[0].data = categories.map(cat => categoryTotals[cat]);
+      chart.update();
+    }
+  <!-- All category filtering and chart data uses filtered_category_totals from context -->
+  </script>
 {% endblock %}
