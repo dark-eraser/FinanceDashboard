@@ -1,21 +1,39 @@
 def expenses_by_category(request):
-    transactions = request.session.get("transactions", [])
+    from .models import Transaction, UploadedFile
+
+    file_id = request.GET.get("file")
+    files = UploadedFile.objects.all().order_by("-uploaded_at")
+    if file_id:
+        transactions_qs = Transaction.objects.filter(uploaded_file_id=file_id)
+    else:
+        transactions_qs = Transaction.objects.all()
+    transactions = [
+        {
+            "Date": t.date,
+            "Booking_text": t.booking_text,
+            "Category": t.category,
+            "Amount": t.amount,
+        }
+        for t in transactions_qs
+    ]
     from collections import defaultdict
 
     category_totals = defaultdict(float)
     for tx in transactions:
         category = tx.get("Category", "Unknown")
-        amount_str = tx.get("Amount", "0")
-        try:
-            # Remove commas, spaces, and handle empty/invalid values
-            amount_clean = amount_str.replace(",", "").strip()
-            amount = (
-                float(amount_clean)
-                if amount_clean and amount_clean.lower() != "nan"
-                else 0.0
-            )
-        except Exception:
-            amount = 0.0
+        amt = tx.get("Amount", 0)
+        if isinstance(amt, (float, int)):
+            amount = amt if amt is not None else 0.0
+        else:
+            try:
+                amount_clean = str(amt).replace(",", "").strip()
+                amount = (
+                    float(amount_clean)
+                    if amount_clean and amount_clean.lower() != "nan"
+                    else 0.0
+                )
+            except Exception:
+                amount = 0.0
         category_totals[category] += amount
     labels = list(category_totals.keys())
     amounts = list(category_totals.values())
@@ -31,6 +49,7 @@ def expenses_by_category(request):
             "amounts": json.dumps(amounts),
             "category_table": category_table,
             "transactions": transactions,
+            "files": files,
         },
     )
 
@@ -147,7 +166,18 @@ def dashboard(request):
                 error = f"CSV format not recognized. Columns found: {', '.join(df.columns)}. Please upload a ZKB, Revolut, or supported export."
     # Save transactions in session for analytics/dashboard use
     if transactions:
-        request.session["transactions"] = transactions
+        from .models import Transaction, UploadedFile
+
+        # Create a new UploadedFile record for this upload
+        uploaded_file = UploadedFile.objects.create(name=file.name)
+        for tx in transactions:
+            Transaction.objects.create(
+                uploaded_file=uploaded_file,
+                date=tx.get("Date", ""),
+                booking_text=tx.get("Booking_text", ""),
+                category=tx.get("Category", ""),
+                amount=float(tx.get("Amount", 0) or 0),
+            )
     return render(
         request,
         "transactions/dashboard.html",

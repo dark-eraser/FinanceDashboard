@@ -1,4 +1,14 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+{% block content %}
+<form method="get" style="margin-bottom:20px;">
+  <label for="file">Select datasource:</label>
+  <select name="file" id="file" onchange="this.form.submit()">
+    <option value="">All files</option>
+    {% for f in files %}
+      <option value="{{ f.id }}" {% if request.GET.file == f.id|stringformat:'s' %}selected{% endif %}>{{ f.name }}</option>
+    {% endfor %}
+  </select>
+</form>
 <h2>Expenses by Category</h2>
 <div>
   <canvas id="categoryChart" width="400" height="200"></canvas>
