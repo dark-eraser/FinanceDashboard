@@ -1,3 +1,94 @@
+def expenses_vs_income(request):
+    from .models import Transaction, UploadedFile
+
+    file_ids = request.GET.getlist("file")
+    files = UploadedFile.objects.all().order_by("-uploaded_at")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    qs = Transaction.objects.all()
+    if file_ids:
+        qs = qs.filter(uploaded_file_id__in=file_ids)
+    transactions = list(qs)
+    # Python-side date filtering for string dates
+    import datetime
+
+    def parse_date(date_str):
+        for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    if start_date:
+        start_dt = parse_date(start_date)
+        transactions = [
+            t
+            for t in transactions
+            if parse_date(t.date) and parse_date(t.date) >= start_dt
+        ]
+    if end_date:
+        end_dt = parse_date(end_date)
+        transactions = [
+            t
+            for t in transactions
+            if parse_date(t.date) and parse_date(t.date) <= end_dt
+        ]
+
+    # Get unique categories for checkboxes
+    from collections import defaultdict
+
+    category_totals = defaultdict(float)
+    for t in transactions:
+        category = t.category if t.category else "Uncounted"
+        if category not in category_totals:
+            category_totals[category] = 0.0
+        try:
+            category_totals[category] += float(t.amount) if t.amount else 0.0
+        except Exception:
+            pass
+
+    # Filter out 'Uncounted' for display
+    filtered_category_totals = {
+        k: v for k, v in category_totals.items() if k != "Uncounted"
+    }
+
+    # Aggregate expenses and income
+    expenses = sum(t.amount for t in transactions if t.amount and t.amount < 0)
+    income = sum(t.amount for t in transactions if t.amount and t.amount > 0)
+
+    # Prepare for chart
+    chart_data = {
+        "labels": ["Expenses", "Income"],
+        "amounts": [abs(expenses), income],
+    }
+    # Prepare transactions for table
+    tx_data = [
+        {
+            "Date": t.date,
+            "Booking_text": t.booking_text,
+            "Category": t.category,
+            "Amount": t.amount,
+        }
+        for t in transactions
+    ]
+    import json
+
+    return render(
+        request,
+        "dashboard/expenses_vs_income.html",
+        {
+            "chart_data": json.dumps(chart_data),
+            "transactions": tx_data,
+            "files": files,
+            "selected_file_ids": [str(fid) for fid in file_ids],
+            "start_date": start_date,
+            "end_date": end_date,
+            "filtered_category_totals": filtered_category_totals,
+        },
+    )
+
+
 def expenses_by_category(request):
     from .models import Transaction, UploadedFile
 

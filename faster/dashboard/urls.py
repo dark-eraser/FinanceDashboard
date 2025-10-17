@@ -16,8 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from transactions.views import expenses_by_category, expenses_vs_income
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("transactions.urls")),
+    path("expenses-vs-income/", expenses_vs_income, name="expenses_vs_income"),
 ]
