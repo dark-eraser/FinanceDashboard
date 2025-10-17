@@ -35,7 +35,7 @@ for fname in os.listdir(DATA_FOLDER):
     df = pd.read_csv(infile, sep=";" if "zkb" in fname else ",")
     # Find merchant column
     merchant_col = None
-    for col in ["Merchant", "Merchant/Use", "Description", "Booking text"]:
+    for col in ["Merchant", "Merchant/Use", "description", "Booking text"]:
         if col in df.columns:
             merchant_col = col
             break
