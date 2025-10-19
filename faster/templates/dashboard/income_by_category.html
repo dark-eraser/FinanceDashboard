@@ -1,6 +1,7 @@
 {% extends "base.html" %} {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div class="container mt-4">
-  <h2 class="text-center mb-4">Expenses vs Income</h2>
+  <h2 class="text-center mb-4">Income by Category</h2>
 
   <!-- Current Filters Info -->
   <div class="alert alert-info mb-3">
@@ -45,7 +46,7 @@
   <div class="row justify-content-center align-items-start mb-4">
     <div class="col-md-8 d-flex flex-column align-items-center">
       <canvas
-        id="incomeExpenseChart"
+        id="categoryChart"
         style="max-width: 100%; height: 400px"
       ></canvas>
     </div>
@@ -73,13 +74,52 @@
   </div>
   <div class="accordion" id="dashboardAccordion">
     <div class="accordion-item">
-      <h2 class="accordion-header" id="headingTransactions">
+      <h2 class="accordion-header" id="headingTotals">
         <button
           class="accordion-button"
           type="button"
           data-bs-toggle="collapse"
-          data-bs-target="#collapseTransactions"
+          data-bs-target="#collapseTotals"
           aria-expanded="true"
+          aria-controls="collapseTotals"
+        >
+          Category Totals
+        </button>
+      </h2>
+      <div
+        id="collapseTotals"
+        class="accordion-collapse collapse show"
+        aria-labelledby="headingTotals"
+        data-bs-parent="#dashboardAccordion"
+      >
+        <div class="accordion-body">
+          <table class="table table-bordered" id="category-totals-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for category, total in filtered_category_totals.items %}
+              <tr data-category="{{ category }}">
+                <td>{{ category }}</td>
+                <td>{{ total|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingTransactions">
+        <button
+          class="accordion-button collapsed"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapseTransactions"
+          aria-expanded="false"
           aria-controls="collapseTransactions"
         >
           Transactions
@@ -87,7 +127,7 @@
       </h2>
       <div
         id="collapseTransactions"
-        class="accordion-collapse collapse show"
+        class="accordion-collapse collapse"
         aria-labelledby="headingTransactions"
         data-bs-parent="#dashboardAccordion"
       >
@@ -119,16 +159,25 @@
     </div>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Bootstrap 5 Accordion JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // Filter table by selected categories
+  // Filter table and chart by selected categories
   document.querySelectorAll(".category-filter").forEach(function (checkbox) {
     checkbox.addEventListener("change", function () {
       const checkedCategories = Array.from(
         document.querySelectorAll(".category-filter:checked")
       ).map((cb) => cb.value);
       // Table rows
+      document
+        .querySelectorAll("#category-totals-table tbody tr")
+        .forEach(function (row) {
+          if (checkedCategories.includes(row.getAttribute("data-category"))) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        });
       document
         .querySelectorAll("#transactions-table tbody tr")
         .forEach(function (row) {
@@ -138,23 +187,25 @@
             row.style.display = "none";
           }
         });
+      // Chart update
+      updateChart(checkedCategories);
     });
   });
 
-  const chartData = JSON.parse("{{ chart_data|safe|escapejs }}");
-  const ctx = document.getElementById("incomeExpenseChart").getContext("2d");
+  // Chart.js setup
+  const categoryTotals = JSON.parse(
+    "{{ filtered_category_totals_json|safe|escapejs }}"
+  );
+  const ctx = document.getElementById("categoryChart").getContext("2d");
   let chart = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: chartData.labels,
+      labels: Object.keys(categoryTotals),
       datasets: [
         {
-          label: "Amount",
-          data: chartData.amounts,
-          backgroundColor: [
-            "rgba(255, 99, 132, 0.5)",
-            "rgba(54, 162, 235, 0.5)",
-          ],
+          label: "Total by Category",
+          data: Object.values(categoryTotals),
+          backgroundColor: "rgba(75, 192, 192, 0.5)",
         },
       ],
     },
@@ -165,5 +216,19 @@
       },
     },
   });
+
+  function updateChart(selectedCategories) {
+    const filteredLabels = [];
+    const filteredData = [];
+    for (const category in categoryTotals) {
+      if (selectedCategories.includes(category)) {
+        filteredLabels.push(category);
+        filteredData.push(categoryTotals[category]);
+      }
+    }
+    chart.data.labels = filteredLabels;
+    chart.data.datasets[0].data = filteredData;
+    chart.update();
+  }
 </script>
 {% endblock %}

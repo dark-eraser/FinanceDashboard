@@ -1,14 +1,162 @@
+def settings_view(request):
+    """Settings view for managing data sources, currencies, and uploads"""
+    import json
+
+    from .models import Transaction, UploadedFile
+
+    files = UploadedFile.objects.all().order_by("-uploaded_at")
+    all_currencies = sorted(
+        set(t.currency for t in Transaction.objects.all() if t.currency)
+    )
+
+    # Get current settings from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
+    error = None
+    success = None
+
+    # Handle file upload
+    if request.method == "POST" and "csv_file" in request.FILES:
+        csv_file = request.FILES["csv_file"]
+
+        try:
+            import io
+
+            import pandas as pd
+
+            content = csv_file.read().decode("utf-8")
+
+            # Try different separators
+            df = None
+            for sep in [";", ",", None]:
+                try:
+                    df = pd.read_csv(io.StringIO(content), sep=sep)
+                    if len(df.columns) > 1:
+                        break
+                except Exception:
+                    continue
+
+            if df is None or len(df.columns) <= 1:
+                error = "Could not parse CSV file"
+            else:
+                # Normalize column names
+                df.columns = [col.strip() for col in df.columns]
+
+                # Create UploadedFile record
+                uploaded_file = UploadedFile.objects.create(name=csv_file.name)
+
+                # Map columns based on different CSV formats
+                transactions_to_create = []
+
+                for _, row in df.iterrows():
+                    # Extract date
+                    date_val = (
+                        row.get("Date")
+                        or row.get("value_date")
+                        or row.get("Started Date")
+                        or ""
+                    )
+
+                    # Extract description
+                    booking_text = (
+                        row.get("Booking text")
+                        or row.get("description")
+                        or row.get("Description")
+                        or ""
+                    )
+
+                    # Extract category
+                    category = row.get("Category") or ""
+
+                    # Extract amount
+                    amount = None
+                    if "Debit CHF" in row and pd.notna(row["Debit CHF"]):
+                        amount = -abs(float(row["Debit CHF"]))
+                    elif "Credit CHF" in row and pd.notna(row["Credit CHF"]):
+                        amount = abs(float(row["Credit CHF"]))
+                    elif "amount" in row and pd.notna(row["amount"]):
+                        amount = float(row["amount"])
+                    elif "Amount" in row and pd.notna(row["Amount"]):
+                        amount = float(row["Amount"])
+
+                    # Extract currency
+                    currency = (
+                        row.get("curr")
+                        or row.get("currency")
+                        or row.get("Currency")
+                        or ""
+                    )
+
+                    transactions_to_create.append(
+                        Transaction(
+                            date=str(date_val),
+                            booking_text=str(booking_text),
+                            category=str(category),
+                            amount=amount,
+                            currency=str(currency),
+                            uploaded_file=uploaded_file,
+                        )
+                    )
+
+                Transaction.objects.bulk_create(transactions_to_create)
+                success = f"Successfully uploaded {len(transactions_to_create)} transactions from {csv_file.name}"
+
+                # Refresh files list
+                files = UploadedFile.objects.all().order_by("-uploaded_at")
+                all_currencies = sorted(
+                    set(t.currency for t in Transaction.objects.all() if t.currency)
+                )
+
+        except Exception as e:
+            error = f"Error processing file: {str(e)}"
+
+    # Handle settings update
+    elif request.method == "POST":
+        selected_file_ids = request.POST.getlist("file")
+        selected_currencies = request.POST.getlist("currency")
+
+        # Save to session
+        request.session["selected_file_ids"] = selected_file_ids
+        request.session["selected_currencies"] = selected_currencies
+
+        success = "Settings saved successfully"
+
+    return render(
+        request,
+        "dashboard/settings.html",
+        {
+            "files": files,
+            "all_currencies": all_currencies,
+            "selected_file_ids": selected_file_ids,
+            "selected_currencies": selected_currencies,
+            "error": error,
+            "success": success,
+        },
+    )
+
+
 def expenses_vs_income(request):
     from .models import Transaction, UploadedFile
 
-    file_ids = request.GET.getlist("file")
+    # Get filters from session instead of GET parameters
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
     files = UploadedFile.objects.all().order_by("-uploaded_at")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
+
     qs = Transaction.objects.all()
-    if file_ids:
-        qs = qs.filter(uploaded_file_id__in=file_ids)
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
     transactions = list(qs)
+
+    # Get unique currencies for dropdown
+    all_currencies = sorted(
+        {t.currency for t in Transaction.objects.all() if t.currency}
+    )
+
     # Python-side date filtering for string dates
     import datetime
 
@@ -34,6 +182,10 @@ def expenses_vs_income(request):
             for t in transactions
             if parse_date(t.date) and parse_date(t.date) <= end_dt
         ]
+
+    # Filter by currencies if selected in session
+    if selected_currencies:
+        transactions = [t for t in transactions if t.currency in selected_currencies]
 
     # Get unique categories for checkboxes
     from collections import defaultdict
@@ -69,6 +221,7 @@ def expenses_vs_income(request):
             "Booking_text": t.booking_text,
             "Category": t.category,
             "Amount": t.amount,
+            "Currency": t.currency,
         }
         for t in transactions
     ]
@@ -81,10 +234,12 @@ def expenses_vs_income(request):
             "chart_data": json.dumps(chart_data),
             "transactions": tx_data,
             "files": files,
-            "selected_file_ids": [str(fid) for fid in file_ids],
+            "selected_file_ids": selected_file_ids,
             "start_date": start_date,
             "end_date": end_date,
             "filtered_category_totals": filtered_category_totals,
+            "all_currencies": all_currencies,
+            "selected_currencies": selected_currencies,
         },
     )
 
@@ -92,27 +247,138 @@ def expenses_vs_income(request):
 def expenses_by_category(request):
     from .models import Transaction, UploadedFile
 
-    file_ids = request.GET.getlist("file")
+    # Get filters from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
     files = UploadedFile.objects.all().order_by("-uploaded_at")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
+
     qs = Transaction.objects.all()
-    if file_ids:
-        qs = qs.filter(uploaded_file_id__in=file_ids)
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+
+    # Get unique currencies for dropdown
+    all_currencies = sorted(
+        {t.currency for t in Transaction.objects.all() if t.currency}
+    )
+
     # Filter by date range if provided
     if start_date:
         qs = qs.filter(date__gte=start_date)
     if end_date:
         qs = qs.filter(date__lte=end_date)
+
+    # Filter by currencies if selected in session
+    if selected_currencies:
+        qs = qs.filter(currency__in=selected_currencies)
+
     transactions_qs = qs
+    # Filter to only include expenses (negative amounts) and convert to positive
     transactions = [
         {
             "Date": t.date,
             "Booking_text": t.booking_text,
             "Category": t.category,
-            "Amount": t.amount,
+            "Amount": abs(t.amount),  # Convert to positive for display
+            "Currency": t.currency,
         }
         for t in transactions_qs
+        if t.amount is not None and t.amount < 0
+    ]
+    from collections import defaultdict
+
+    category_totals = defaultdict(float)
+    for tx in transactions:
+        category = tx.get("Category", "Unknown")
+        amt = tx.get("Amount", 0)
+        if isinstance(amt, (float, int)):
+            amount = amt if amt is not None else 0.0
+        else:
+            try:
+                amount_clean = str(amt).replace(",", "").strip()
+                amount = (
+                    float(amount_clean)
+                    if amount_clean and amount_clean.lower() != "nan"
+                    else 0.0
+                )
+            except Exception:
+                amount = 0.0
+        category_totals[category] += abs(amount)  # Store as positive
+    labels = list(category_totals.keys())
+    amounts = list(category_totals.values())
+    import json
+
+    # Prepare filtered category totals for JS (exclude 'Uncounted')
+    filtered_category_totals = {
+        k: v for k, v in category_totals.items() if k != "Uncounted"
+    }
+
+    # Prepare table data for template
+    category_table = zip(labels, amounts)
+    return render(
+        request,
+        "dashboard/expenses_by_category.html",
+        {
+            "labels": json.dumps(labels),
+            "amounts": json.dumps(amounts),
+            "category_table": category_table,
+            "transactions": transactions,
+            "files": files,
+            "selected_file_ids": selected_file_ids,
+            "start_date": start_date,
+            "end_date": end_date,
+            "filtered_category_totals": filtered_category_totals,
+            "filtered_category_totals_json": json.dumps(filtered_category_totals),
+            "all_currencies": all_currencies,
+            "selected_currencies": selected_currencies,
+        },
+    )
+
+
+def income_by_category(request):
+    from .models import Transaction, UploadedFile
+
+    # Get filters from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
+    files = UploadedFile.objects.all().order_by("-uploaded_at")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    qs = Transaction.objects.all()
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+
+    # Get unique currencies for dropdown
+    all_currencies = sorted(
+        {t.currency for t in Transaction.objects.all() if t.currency}
+    )
+
+    # Filter by date range if provided
+    if start_date:
+        qs = qs.filter(date__gte=start_date)
+    if end_date:
+        qs = qs.filter(date__lte=end_date)
+
+    # Filter by currencies if selected in session
+    if selected_currencies:
+        qs = qs.filter(currency__in=selected_currencies)
+
+    transactions_qs = qs
+    # Filter to only include income (positive amounts)
+    transactions = [
+        {
+            "Date": t.date,
+            "Booking_text": t.booking_text,
+            "Category": t.category,
+            "Amount": t.amount,  # Already positive
+            "Currency": t.currency,
+        }
+        for t in transactions_qs
+        if t.amount is not None and t.amount > 0
     ]
     from collections import defaultdict
 
@@ -146,18 +412,20 @@ def expenses_by_category(request):
     category_table = zip(labels, amounts)
     return render(
         request,
-        "dashboard/expenses_by_category.html",
+        "dashboard/income_by_category.html",
         {
             "labels": json.dumps(labels),
             "amounts": json.dumps(amounts),
             "category_table": category_table,
             "transactions": transactions,
             "files": files,
-            "selected_file_ids": [str(fid) for fid in file_ids],
+            "selected_file_ids": selected_file_ids,
             "start_date": start_date,
             "end_date": end_date,
             "filtered_category_totals": filtered_category_totals,
             "filtered_category_totals_json": json.dumps(filtered_category_totals),
+            "all_currencies": all_currencies,
+            "selected_currencies": selected_currencies,
         },
     )
 
@@ -169,156 +437,83 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 def dashboard(request):
-    transactions = []
-    error = None
-    zkb_cols = ["date", "booking text", "category", "debit chf"]
-    revolut_required = ["completed date", "description", "category", "amount"]
-    if request.method == "POST" and request.FILES.get("csv_file"):
-        # Try both separators, resetting file pointer each time
-        file = request.FILES["csv_file"]
-        df = None
-        import io
+    from collections import defaultdict
 
-        # Read file as text
-        file.seek(0)
-        file_content = file.read()
-        if isinstance(file_content, bytes):
-            file_content = file_content.decode("utf-8-sig")
-        # Debug: print first line of file
-        first_line = file_content.splitlines()[0] if file_content else ""
-        print(f"First line of CSV: {first_line}")
-        # Try auto-detecting separator first
-        try:
-            df = pd.read_csv(
-                io.StringIO(file_content), sep=None, engine="python", dtype=str
-            )
-            df.columns = [c.strip() for c in df.columns]
-        except Exception:
-            df = None
-        # If auto-detect fails, try explicit separators
-        if df is None:
-            for sep in [";", ","]:
-                try:
-                    df = pd.read_csv(io.StringIO(file_content), sep=sep, dtype=str)
-                    df.columns = [c.strip() for c in df.columns]
-                    break
-                except Exception:
-                    df = None
-                    continue
-        if df is not None:
-            # Normalize columns for matching
-            norm_cols = [c.strip().lower() for c in df.columns]
-            # Debug: print normalized columns to error for troubleshooting
-            print(f"Normalized columns: {norm_cols}")
-        if df is None:
-            error = "Could not read CSV file."
-        else:
-            # Try ZKB format first (case/whitespace-insensitive)
-            if all(col in norm_cols for col in zkb_cols):
-                rename_map = {}
-                for orig in df.columns:
-                    norm = orig.strip().lower()
-                    if norm == "booking text":
-                        rename_map[orig] = "Booking_text"
-                    elif norm == "category":
-                        rename_map[orig] = "Category"
-                    elif norm == "date":
-                        rename_map[orig] = "Date"
-                    elif norm == "debit chf":
-                        rename_map[orig] = "Amount"
-                df = df.rename(columns=rename_map)
-                transactions = df[
-                    ["Date", "Booking_text", "Category", "Amount"]
-                ].to_dict(orient="records")
-            # Try Revolut format (case/whitespace-insensitive)
-            elif all(col in norm_cols for col in revolut_required):
-                rename_map = {}
-                for orig in df.columns:
-                    norm = orig.strip().lower()
-                    if norm == "completed date":
-                        rename_map[orig] = "Date"
-                    elif norm == "description":
-                        rename_map[orig] = "Booking_text"
-                    elif norm == "category":
-                        rename_map[orig] = "Category"
-                    elif norm == "amount":
-                        rename_map[orig] = "Amount"
-                df = df.rename(columns=rename_map)
-                transactions = df[
-                    ["Date", "Booking_text", "Category", "Amount"]
-                ].to_dict(orient="records")
-            # Flexible custom format: only require key columns (set-based)
-            elif set(["completed date", "description", "category", "amount"]).issubset(
-                set(norm_cols)
-            ):
-                rename_map = {}
-                for orig in df.columns:
-                    norm = orig.strip().lower()
-                    if norm == "completed date":
-                        rename_map[orig] = "Date"
-                    elif norm == "description":
-                        rename_map[orig] = "Booking_text"
-                    elif norm == "category":
-                        rename_map[orig] = "Category"
-                    elif norm == "amount":
-                        rename_map[orig] = "Amount"
-                df = df.rename(columns=rename_map)
-                # Only select columns that exist
-                selected_cols = [
-                    col
-                    for col in ["Date", "Booking_text", "Category", "Amount"]
-                    if col in df.columns
-                ]
-                transactions = df[selected_cols].to_dict(orient="records")
-            else:
-                error = f"CSV format not recognized. Columns found: {', '.join(df.columns)}. Please upload a ZKB, Revolut, or supported export."
-    # Save transactions in session for analytics/dashboard use
-    if transactions:
-        from .models import Transaction, UploadedFile
+    from .models import Transaction, UploadedFile
 
-        # Create a new UploadedFile record for this upload
-        uploaded_file = UploadedFile.objects.create(name=file.name)
-        for tx in transactions:
-            Transaction.objects.create(
-                uploaded_file=uploaded_file,
-                date=tx.get("Date", ""),
-                booking_text=tx.get("Booking_text", ""),
-                category=tx.get("Category", ""),
-                amount=float(tx.get("Amount", 0) or 0),
-            )
+    # Get filters from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
+    # Filter transactions based on session settings
+    qs = Transaction.objects.all()
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+    if selected_currencies:
+        qs = qs.filter(currency__in=selected_currencies)
+
+    all_transactions = list(qs)
+
+    # Calculate top spending categories (negative amounts)
+    expense_by_category = defaultdict(float)
+    for t in all_transactions:
+        if t.amount and t.amount < 0 and t.category and t.category != "Uncounted":
+            expense_by_category[t.category] += abs(t.amount)
+
+    # Get top 5 spending categories
+    top_spending = sorted(
+        expense_by_category.items(), key=lambda x: x[1], reverse=True
+    )[:5]
+
+    # Calculate top income categories (positive amounts)
+    income_by_category = defaultdict(float)
+    for t in all_transactions:
+        if t.amount and t.amount > 0 and t.category and t.category != "Uncounted":
+            income_by_category[t.category] += t.amount
+
+    # Get top 5 income categories
+    top_income = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)[
+        :5
+    ]
+
+    # Prepare recent transactions for display (last 50)
+    transactions = [
+        {
+            "Date": t.date,
+            "Booking_text": t.booking_text,
+            "Category": t.category,
+            "Amount": t.amount,
+            "Currency": t.currency,
+        }
+        for t in all_transactions[:50]
+    ]
+
     return render(
         request,
         "transactions/dashboard.html",
-        {"transactions": transactions, "error": error},
+        {
+            "transactions": transactions,
+            "top_spending": top_spending,
+            "top_income": top_income,
+        },
     )
 
 
 import json
 
-from django.http import JsonResponse
 
+def delete_file(request, file_id):
+    """Delete an uploaded file and all its associated transactions"""
+    from django.shortcuts import redirect
 
-def analytics_dashboard(request):
-    # For demo: load transactions from session if available
-    transactions = request.session.get("transactions", [])
-    # Aggregate by category
-    from collections import defaultdict
+    from .models import UploadedFile
 
-    category_totals = defaultdict(float)
-    for tx in transactions:
+    if request.method == "POST":
         try:
-            category = tx.get("Category", "Unknown")
-            amount = float(tx.get("Amount", 0))
-            category_totals[category] += amount
-        except Exception:
-            continue
-    labels = list(category_totals.keys())
-    amounts = list(category_totals.values())
-    return render(
-        request,
-        "dashboard/analytics.html",
-        {
-            "labels": json.dumps(labels),
-            "amounts": json.dumps(amounts),
-        },
-    )
+            uploaded_file = UploadedFile.objects.get(id=file_id)
+            uploaded_file.delete()  # This will cascade delete all related transactions
+        except UploadedFile.DoesNotExist:
+            pass
+
+    # Redirect back to the referrer or dashboard
+    return redirect(request.META.get("HTTP_REFERER", "/"))

@@ -2,19 +2,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div class="container mt-4">
   <h2 class="text-center mb-4">Expenses by Category</h2>
+
+  <!-- Current Filters Info -->
+  <div class="alert alert-info mb-3">
+    <strong>Active Filters:</strong>
+    {% if selected_file_ids %} {{ selected_file_ids|length }} file(s) selected
+    {% else %} All files {% endif %} | {% if selected_currencies %} {{
+    selected_currencies|join:", " }} {% else %} All currencies {% endif %}
+    <a
+      href="{% url 'settings' %}"
+      class="btn btn-sm btn-outline-primary float-end"
+    >
+      <i class="bi bi-gear"></i> Change Filters
+    </a>
+  </div>
+
+  <!-- Date Range Filter -->
   <form method="get" id="datasource-form" class="mb-4">
-    <div class="form-group mb-2">
-      <label>Select Data Sources:</label>
-      <div id="datasource-checkboxes" class="d-flex flex-wrap">
-        {% for file in files %}
-        <div class="form-check me-3">
-          <input class="form-check-input datasource-filter" type="checkbox"
-          name="file" value="{{ file.id }}" id="ds-{{ forloop.counter }}" {% if file.id|stringformat:'s' in selected_file_ids %}checked{% endif %}>
-          <label class="form-check-label" for="ds-{{ forloop.counter }}">{{ file.name }}</label>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
     <div class="form-group mb-2 d-flex flex-row align-items-end">
       <div class="me-3">
         <label for="start_date">Start Date:</label>
@@ -36,7 +40,7 @@
           value="{{ end_date|default:'' }}"
         />
       </div>
-      <button type="submit" class="btn btn-primary">Update Dashboard</button>
+      <button type="submit" class="btn btn-primary">Apply Date Filter</button>
     </div>
   </form>
   <div class="row justify-content-center align-items-start mb-4">
@@ -134,6 +138,7 @@
                 <th>Date</th>
                 <th>Description</th>
                 <th>Amount</th>
+                <th>Currency</th>
                 <th>Category</th>
               </tr>
             </thead>
@@ -143,6 +148,7 @@
                 <td>{{ tx.Date }}</td>
                 <td>{{ tx.Booking_text }}</td>
                 <td>{{ tx.Amount|floatformat:2 }}</td>
+                <td>{{ tx.Currency }}</td>
                 <td>{{ tx.Category }}</td>
               </tr>
               {% endif %} {% endfor %}

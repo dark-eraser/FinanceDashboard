@@ -17,6 +17,7 @@ class Transaction(models.Model):
     booking_text = models.CharField(max_length=256, blank=True)
     category = models.CharField(max_length=64, blank=True)
     amount = models.FloatField(blank=True, null=True)
+    currency = models.CharField(max_length=10, blank=True, default="")
 
     def __str__(self):
-        return f"{self.date} | {self.booking_text} | {self.category} | {self.amount}"
+        return f"{self.date} | {self.booking_text} | {self.category} | {self.amount} {self.currency}"

@@ -1,16 +1,70 @@
 {% extends "base.html" %} {% block content %}
-<h1>Finance Dashboard</h1>
-{% if error %}
-<div class="alert alert-danger">{{ error }}</div>
-{% endif %}
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  <div class="mb-3">
-    <label for="csv_file" class="form-label">Upload CSV</label>
-    <input type="file" class="form-control" id="csv_file" name="csv_file" />
+<h1 class="text-center mb-4">Finance Dashboard</h1>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+  <!-- Top Spending Categories Card -->
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">Top Spending Categories</h5>
+      </div>
+      <div class="card-body">
+        {% if top_spending %}
+        <ul class="list-group list-group-flush">
+          {% for category, amount in top_spending %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            <span>{{ category }}</span>
+            <span class="badge bg-danger rounded-pill"
+              >{{ amount|floatformat:2 }}</span
+            >
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center my-4">No expense data available</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
-  <button type="submit" class="btn btn-primary">Upload</button>
-</form>
+
+  <!-- Top Income Categories Card -->
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Top Income Categories</h5>
+      </div>
+      <div class="card-body">
+        {% if top_income %}
+        <ul class="list-group list-group-flush">
+          {% for category, amount in top_income %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            <span>{{ category }}</span>
+            <span class="badge bg-success rounded-pill"
+              >{{ amount|floatformat:2 }}</span
+            >
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center my-4">No income data available</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="text-center mb-4">
+  <a href="{% url 'settings' %}" class="btn btn-primary btn-lg">
+    <i class="bi bi-gear"></i> Manage Data & Settings
+  </a>
+</div>
+
 <hr />
 <div id="transactions-table">
   {% include "transactions/transactions_table.html" %}
