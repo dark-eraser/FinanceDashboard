@@ -43,6 +43,48 @@ def settings_view(request):
                 # Normalize column names
                 df.columns = [col.strip() for col in df.columns]
 
+                # Expand ZKB child transactions (rows with empty Date field)
+                # ZKB statements have grouped transactions like "Debit Mobile Banking (3)" where
+                # child transactions have empty Date and need to inherit parent's date
+                if "Date" in df.columns:
+                    current_date = None
+                    for idx in df.index:
+                        date_val = str(
+                            df.at[idx, "Date"] if pd.notna(df.at[idx, "Date"]) else ""
+                        ).strip()
+
+                        if date_val and date_val != "Date":
+                            current_date = date_val
+                        elif current_date:
+                            # Child transaction - inherit parent's date
+                            df.at[idx, "Date"] = current_date
+
+                            # Also populate amount from Amount details if present
+                            if "Amount details" in df.columns and "Curr" in df.columns:
+                                amount_str = str(
+                                    df.at[idx, "Amount details"]
+                                    if pd.notna(df.at[idx, "Amount details"])
+                                    else ""
+                                ).strip()
+                                curr = str(
+                                    df.at[idx, "Curr"]
+                                    if pd.notna(df.at[idx, "Curr"])
+                                    else ""
+                                ).strip()
+
+                                if amount_str and curr == "CHF":
+                                    debit_empty = (
+                                        pd.isna(df.at[idx, "Debit CHF"])
+                                        or str(df.at[idx, "Debit CHF"]).strip() == ""
+                                    )
+                                    credit_empty = (
+                                        pd.isna(df.at[idx, "Credit CHF"])
+                                        or str(df.at[idx, "Credit CHF"]).strip() == ""
+                                    )
+
+                                    if debit_empty and credit_empty:
+                                        df.at[idx, "Debit CHF"] = amount_str
+
                 # Create UploadedFile record
                 uploaded_file = UploadedFile.objects.create(name=csv_file.name)
 
@@ -454,27 +496,41 @@ def dashboard(request):
 
     all_transactions = list(qs)
 
-    # Calculate top spending categories (negative amounts)
-    expense_by_category = defaultdict(float)
+    # Calculate top spending categories (negative amounts) with currency breakdown
+    expense_by_category_currency = defaultdict(lambda: defaultdict(float))
     for t in all_transactions:
         if t.amount and t.amount < 0 and t.category and t.category != "Uncounted":
-            expense_by_category[t.category] += abs(t.amount)
+            currency = t.currency if t.currency else "Unknown"
+            expense_by_category_currency[t.category][currency] += abs(t.amount)
 
-    # Get top 5 spending categories
-    top_spending = sorted(
-        expense_by_category.items(), key=lambda x: x[1], reverse=True
-    )[:5]
+    # Convert to list with total and currency breakdown
+    top_spending = []
+    for category, currency_amounts in expense_by_category_currency.items():
+        total = sum(currency_amounts.values())
+        top_spending.append(
+            {"category": category, "total": total, "currencies": dict(currency_amounts)}
+        )
 
-    # Calculate top income categories (positive amounts)
-    income_by_category = defaultdict(float)
+    # Sort by total and get top 5
+    top_spending = sorted(top_spending, key=lambda x: x["total"], reverse=True)[:5]
+
+    # Calculate top income categories (positive amounts) with currency breakdown
+    income_by_category_currency = defaultdict(lambda: defaultdict(float))
     for t in all_transactions:
         if t.amount and t.amount > 0 and t.category and t.category != "Uncounted":
-            income_by_category[t.category] += t.amount
+            currency = t.currency if t.currency else "Unknown"
+            income_by_category_currency[t.category][currency] += t.amount
 
-    # Get top 5 income categories
-    top_income = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)[
-        :5
-    ]
+    # Convert to list with total and currency breakdown
+    top_income = []
+    for category, currency_amounts in income_by_category_currency.items():
+        total = sum(currency_amounts.values())
+        top_income.append(
+            {"category": category, "total": total, "currencies": dict(currency_amounts)}
+        )
+
+    # Sort by total and get top 5
+    top_income = sorted(top_income, key=lambda x: x["total"], reverse=True)[:5]
 
     # Prepare recent transactions for display (last 50)
     transactions = [

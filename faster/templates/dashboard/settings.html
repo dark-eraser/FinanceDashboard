@@ -1,4 +1,6 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+
+{% block content %}
 <h1 class="text-center mb-4">Settings & Data Management</h1>
 
 {% if success %}
@@ -6,7 +8,9 @@
   {{ success }}
   <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
-{% endif %} {% if error %}
+{% endif %}
+
+{% if error %}
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
   {{ error }}
   <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -59,21 +63,25 @@
             <small class="text-muted d-block mb-2">
               Select which uploaded files to include in analysis
             </small>
-            {% if files %} {% for file in files %}
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="file"
-              value="{{ file.id }}" id="file_{{ file.id }}" {% if
-              file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
-              />
-              <label class="form-check-label" for="file_{{ file.id }}">
-                {{ file.name }}
-                <small class="text-muted"
-                  >({{ file.uploaded_at|date:"Y-m-d H:i" }})</small
-                >
-              </label>
-            </div>
-            {% endfor %} {% else %}
-            <p class="text-muted small">No files uploaded yet</p>
+            {% if files %}
+              {% for file in files %}
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    name="file"
+                    value="{{ file.id }}"
+                    id="file_{{ file.id }}"
+                    {% if file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
+                  />
+                  <label class="form-check-label" for="file_{{ file.id }}">
+                    {{ file.name }}
+                    <small class="text-muted">({{ file.uploaded_at|date:"Y-m-d H:i" }})</small>
+                  </label>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted small">No files uploaded yet</p>
             {% endif %}
           </div>
 
@@ -83,29 +91,24 @@
             <small class="text-muted d-block mb-2">
               Select which currencies to include in analysis
             </small>
-            {% if all_currencies %} {% for currency in all_currencies %}
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                name="currency"
-                value="{{ currency }}"
-                id="currency_{{ currency }}"
-                {%
-                if
-                currency
-                in
-                selected_currencies
-                %}checked{%
-                endif
-                %}
-              />
-              <label class="form-check-label" for="currency_{{ currency }}">
-                {{ currency }}
-              </label>
-            </div>
-            {% endfor %} {% else %}
-            <p class="text-muted small">No currencies found</p>
+            {% if all_currencies %}
+              {% for currency in all_currencies %}
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    name="currency"
+                    value="{{ currency }}"
+                    id="currency_{{ currency }}"
+                    {% if currency in selected_currencies %}checked{% endif %}
+                  />
+                  <label class="form-check-label" for="currency_{{ currency }}">
+                    {{ currency }}
+                  </label>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted small">No currencies found</p>
             {% endif %}
           </div>
 
@@ -144,9 +147,7 @@
                 <td>{{ file.name }}</td>
                 <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
                 <td>
-                  <span class="badge bg-info"
-                    >{{ file.transaction_set.count }}</span
-                  >
+                  <span class="badge bg-info">{{ file.transaction_set.count }}</span>
                 </td>
                 <td>
                   <form
@@ -187,32 +188,31 @@
           <div class="col-md-6">
             <h6>Selected Files:</h6>
             {% if selected_file_ids %}
-            <ul class="list-unstyled">
-              {% for file in files %} {% if file.id|stringformat:"s" in
-              selected_file_ids %}
-              <li>
-                <i class="bi bi-check-circle-fill text-success"></i> {{
-                file.name }}
-              </li>
-              {% endif %} {% endfor %}
-            </ul>
+              <ul class="list-unstyled">
+                {% for file in files %}
+                  {% if file.id|stringformat:"s" in selected_file_ids %}
+                    <li>
+                      <i class="bi bi-check-circle-fill text-success"></i> {{ file.name }}
+                    </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
             {% else %}
-            <p class="text-muted"><em>All files included</em></p>
+              <p class="text-muted"><em>All files included</em></p>
             {% endif %}
           </div>
           <div class="col-md-6">
             <h6>Selected Currencies:</h6>
             {% if selected_currencies %}
-            <ul class="list-unstyled">
-              {% for currency in selected_currencies %}
-              <li>
-                <i class="bi bi-check-circle-fill text-success"></i> {{ currency
-                }}
-              </li>
-              {% endfor %}
-            </ul>
+              <ul class="list-unstyled">
+                {% for currency in selected_currencies %}
+                  <li>
+                    <i class="bi bi-check-circle-fill text-success"></i> {{ currency }}
+                  </li>
+                {% endfor %}
+              </ul>
             {% else %}
-            <p class="text-muted"><em>All currencies included</em></p>
+              <p class="text-muted"><em>All currencies included</em></p>
             {% endif %}
           </div>
         </div>

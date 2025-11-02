@@ -12,14 +12,20 @@
       <div class="card-body">
         {% if top_spending %}
         <ul class="list-group list-group-flush">
-          {% for category, amount in top_spending %}
+          {% for item in top_spending %}
           <li
             class="list-group-item d-flex justify-content-between align-items-center"
           >
-            <span>{{ category }}</span>
-            <span class="badge bg-danger rounded-pill"
-              >{{ amount|floatformat:2 }}</span
-            >
+            <span>{{ item.category }}</span>
+            <span>
+              <span class="badge bg-danger rounded-pill"
+                >{{ item.total|floatformat:2 }}</span
+              >
+              <small class="text-muted ms-2">
+                ({% for currency, amount in item.currencies.items %}{{ currency
+                }}{% if not forloop.last %}, {% endif %}{% endfor %})
+              </small>
+            </span>
           </li>
           {% endfor %}
         </ul>
@@ -39,14 +45,20 @@
       <div class="card-body">
         {% if top_income %}
         <ul class="list-group list-group-flush">
-          {% for category, amount in top_income %}
+          {% for item in top_income %}
           <li
             class="list-group-item d-flex justify-content-between align-items-center"
           >
-            <span>{{ category }}</span>
-            <span class="badge bg-success rounded-pill"
-              >{{ amount|floatformat:2 }}</span
-            >
+            <span>{{ item.category }}</span>
+            <span>
+              <span class="badge bg-success rounded-pill"
+                >{{ item.total|floatformat:2 }}</span
+              >
+              <small class="text-muted ms-2">
+                ({% for currency, amount in item.currencies.items %}{{ currency
+                }}{% if not forloop.last %}, {% endif %}{% endfor %})
+              </small>
+            </span>
           </li>
           {% endfor %}
         </ul>
@@ -66,8 +78,8 @@
 </div>
 
 <hr />
-<div id="transactions-table">
-  {% include "transactions/transactions_table.html" %}
-  <!-- Table will be replaced by HTMX requests -->
-</div>
+<!-- <-- <div id="transactions-table"> -->
+<!-- {% include "transactions/transactions_table.html" %} -->
+<!-- Table will be replaced by HTMX requests -->
+<!-- <-- </div> -->
 {% endblock %}
