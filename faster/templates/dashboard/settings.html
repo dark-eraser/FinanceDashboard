@@ -106,7 +106,9 @@
             <div class="space-y-2 max-h-48 overflow-y-auto pr-2">
               {% if files %}
                 {% for file in files %}
-                  <label class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200">
+                  <label
+                    class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200"
+                  >
                     <input
                       type="checkbox"
                       name="file"
@@ -116,12 +118,16 @@
                     />
                     <span class="ml-3 text-sm">
                       <span class="font-medium text-gray-900">{{ file.name }}</span>
-                      <span class="text-gray-500 block text-xs">{{ file.uploaded_at|date:"M d, Y H:i" }}</span>
+                      <span class="text-gray-500 block text-xs"
+                        >{{ file.uploaded_at|date:"M d, Y H:i" }}</span
+                      >
                     </span>
                   </label>
                 {% endfor %}
               {% else %}
-                <p class="text-sm text-gray-500 italic text-center py-4">No files uploaded yet</p>
+                <p class="text-sm text-gray-500 italic text-center py-4">
+                  No files uploaded yet
+                </p>
               {% endif %}
             </div>
           </div>
@@ -129,27 +135,40 @@
           <!-- Currency Filter -->
           <!-- Currency Filter -->
           <div>
-            <h3 class="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+            <h3
+              class="text-sm font-semibold text-gray-700 mb-2 flex items-center"
+            >
               <i class="bi bi-currency-exchange mr-2 text-green-600"></i>
               Currencies
             </h3>
-            <p class="text-xs text-gray-500 mb-3">Select currencies to include</p>
+            <p class="text-xs text-gray-500 mb-3">
+              Select currencies to include
+            </p>
             <div class="flex flex-wrap gap-2">
-              {% if all_currencies %}
-                {% for currency in all_currencies %}
-                  <label class="inline-flex items-center px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200">
-                    <input
-                      type="checkbox"
-                      name="currency"
-                      value="{{ currency }}"
-                      class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                      {% if currency in selected_currencies %}checked{% endif %}
-                    />
-                    <span class="ml-2 text-sm font-semibold text-gray-700">{{ currency }}</span>
-                  </label>
-                {% endfor %}
-              {% else %}
-                <p class="text-sm text-gray-500 italic">No currencies found</p>
+              {% if all_currencies %} {% for currency in all_currencies %}
+              <label
+                class="inline-flex items-center px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200"
+              >
+                <input
+                  type="checkbox"
+                  name="currency"
+                  value="{{ currency }}"
+                  class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                  {%
+                  if
+                  currency
+                  in
+                  selected_currencies
+                  %}checked{%
+                  endif
+                  %}
+                />
+                <span class="ml-2 text-sm font-semibold text-gray-700"
+                  >{{ currency }}</span
+                >
+              </label>
+              {% endfor %} {% else %}
+              <p class="text-sm text-gray-500 italic">No currencies found</p>
               {% endif %}
             </div>
           </div>
@@ -282,7 +301,9 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3
-            <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+              <h3
+              class="text-sm font-semibold text-gray-700 mb-3 flex items-center"
+            >
               <i class="bi bi-files mr-2 text-purple-600"></i>
               Selected Files
             </h3>
@@ -290,7 +311,9 @@
               <ul class="space-y-2">
                 {% for file in files %}
                   {% if file.id|stringformat:"s" in selected_file_ids %}
-                    <li class="flex items-center text-sm bg-purple-50 px-3 py-2 rounded-lg">
+                    <li
+                      class="flex items-center text-sm bg-purple-50 px-3 py-2 rounded-lg"
+                    >
                       <i class="bi bi-check-circle-fill text-purple-600 mr-2"></i>
                       <span class="text-gray-700">{{ file.name }}</span>
                     </li>
@@ -298,7 +321,11 @@
                 {% endfor %}
               </ul>
             {% else %}
-              <p class="text-gray-500 italic text-sm bg-gray-50 px-4 py-3 rounded-lg">All files included</p>
+              <p
+                class="text-gray-500 italic text-sm bg-gray-50 px-4 py-3 rounded-lg"
+              >
+                All files included
+              </p>
             {% endif %}
           </div>
           <div>
