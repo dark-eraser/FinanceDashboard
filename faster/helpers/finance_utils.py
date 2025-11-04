@@ -202,7 +202,8 @@ CATEGORY_KEYWORDS = {
     ],
     "Refund": ["refund", "refunded", "reimbursement"],
     "Rent": [
-        "kajetan",  # TWINT transfers to Kajetan for rent
+        # Note: KAJETAN rent payments are handled by special rule in preprocess_statement.py
+        # (specific amounts: 1585.5, 1575.5)
         "rent",
         "miete",
         "immobilien",

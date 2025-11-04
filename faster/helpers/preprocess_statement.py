@@ -304,14 +304,15 @@ def fix_vault_amounts(df):
     return df, fixed_count
 
 
-def categorize_transaction(description, merchant_mapping):
+def categorize_transaction(description, merchant_mapping, amount=None):
     """
-    Categorize a transaction based on its description.
+    Categorize a transaction based on its description and optionally amount.
 
     Priority order:
-    1. Check merchant mapping (exact match)
-    2. Check CATEGORY_KEYWORDS (substring match, longest keyword first for specificity)
-    3. Default to "Uncounted"
+    1. Check special rules (specific description + amount combinations)
+    2. Check merchant mapping (exact match)
+    3. Check CATEGORY_KEYWORDS (substring match, longest keyword first for specificity)
+    4. Default to "Uncounted"
     """
     if not description or pd.isna(description):
         return "Uncounted"
@@ -319,11 +320,20 @@ def categorize_transaction(description, merchant_mapping):
     desc_str = str(description).strip()
     desc_lower = desc_str.lower()
 
-    # 1. Check merchant mapping (exact match)
+    # 1. Special rules for specific transactions (description + amount)
+    # KAJETAN TWINT transfers
+    if "kajetan +41789133686" in desc_lower:
+        # Specific rent amounts
+        if amount is not None and abs(float(amount)) in [1585.5, 1575.5]:
+            return "Rent"
+        # All other KAJETAN transfers are bank transfers
+        return "Bank Transfer"
+
+    # 2. Check merchant mapping (exact match)
     if desc_str in merchant_mapping:
         return merchant_mapping[desc_str]
 
-    # 2. Check CATEGORY_KEYWORDS (substring match, check longest keywords first)
+    # 3. Check CATEGORY_KEYWORDS (substring match, check longest keywords first)
     # Build a list of all (category, keyword) tuples and sort by keyword length (descending)
     all_keywords = []
     for category, keywords in CATEGORY_KEYWORDS.items():
@@ -349,8 +359,9 @@ def apply_categorization(df, merchant_mapping):
 
     # Categorize transactions with empty Category
     mask = (df["Category"].fillna("") == "") | (df["Category"] == "Uncounted")
-    df.loc[mask, "Category"] = df.loc[mask, "description"].apply(
-        lambda desc: categorize_transaction(desc, merchant_mapping)
+    df.loc[mask, "Category"] = df.loc[mask].apply(
+        lambda row: categorize_transaction(row["description"], merchant_mapping, row.get("amount")),
+        axis=1
     )
 
     return df
