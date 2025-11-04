@@ -78,46 +78,32 @@
     >
       <div class="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4">
         <h2 class="text-xl font-bold text-white flex items-center">
-          <i class="bi bi-bar-chart-fill mr-2"></i>
+          <i class="bi bi-pie-chart-fill mr-2"></i>
           Top Spending Categories
         </h2>
       </div>
       <div class="p-6">
         {% if top_spending %}
-          <div class="space-y-4">
+          <div class="flex justify-center mb-6">
+            <div class="w-80 h-80">
+              <canvas id="spendingPieChart"></canvas>
+            </div>
+          </div>
+          <div class="space-y-2">
             {% for item in top_spending %}
-              <div
-                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition duration-200"
-              >
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div class="flex items-center space-x-3">
-                  <div class="bg-red-100 rounded-full p-2">
-                    <i class="bi bi-dash-circle text-red-600"></i>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-gray-900">{{ item.category }}</p>
-                    <p class="text-xs text-gray-500">
-                      {% for currency, amount in item.currencies.items %}
-                        {{ currency }}{% if not forloop.last %}, {% endif %}
-                      {% endfor %}
-                    </p>
-                  </div>
+                  <div class="w-4 h-4 rounded-full" style="background-color: {{ item.color }}"></div>
+                  <p class="font-medium text-gray-900 text-sm">{{ item.category }}</p>
                 </div>
-                <div class="text-right">
-                  <p class="text-lg font-bold text-red-600">
-                    {{ item.total|floatformat:2|intcomma }}
-                    <span class="text-sm text-gray-500">
-                      {% for currency, amount in item.currencies.items %}
-                        {{ currency }}{% if not forloop.last %}/{% endif %}
-                      {% endfor %}
-                    </span>
-                  </p>
-                  <div class="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                    <div
-                      class="bg-red-500 h-2 rounded-full"
-                      style="width: {{ item.total|floatformat:0 }}%"
-                    ></div>
-                  </div>
-                </div>
+                <p class="text-sm font-bold text-gray-700">
+                  {{ item.total|floatformat:2|intcomma }}
+                  <span class="text-xs text-gray-500">
+                    {% for currency, amount in item.currencies.items %}
+                      {{ currency }}{% if not forloop.last %}/{% endif %}
+                    {% endfor %}
+                  </span>
+                </p>
               </div>
             {% endfor %}
           </div>
@@ -139,46 +125,32 @@
     >
       <div class="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
         <h2 class="text-xl font-bold text-white flex items-center">
-          <i class="bi bi-graph-up-arrow mr-2"></i>
+          <i class="bi bi-pie-chart-fill mr-2"></i>
           Top Income Categories
         </h2>
       </div>
       <div class="p-6">
         {% if top_income %}
-          <div class="space-y-4">
+          <div class="flex justify-center mb-6">
+            <div class="w-80 h-80">
+              <canvas id="incomePieChart"></canvas>
+            </div>
+          </div>
+          <div class="space-y-2">
             {% for item in top_income %}
-              <div
-                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition duration-200"
-              >
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div class="flex items-center space-x-3">
-                  <div class="bg-green-100 rounded-full p-2">
-                    <i class="bi bi-plus-circle text-green-600"></i>
-                  </div>
-                  <div>
-                    <p class="font-semibold text-gray-900">{{ item.category }}</p>
-                    <p class="text-xs text-gray-500">
-                      {% for currency, amount in item.currencies.items %}
-                        {{ currency }}{% if not forloop.last %}, {% endif %}
-                      {% endfor %}
-                    </p>
-                  </div>
+                  <div class="w-4 h-4 rounded-full" style="background-color: {{ item.color }}"></div>
+                  <p class="font-medium text-gray-900 text-sm">{{ item.category }}</p>
                 </div>
-                <div class="text-right">
-                  <p class="text-lg font-bold text-green-600">
-                    {{ item.total|floatformat:2|intcomma }}
-                    <span class="text-sm text-gray-500">
-                      {% for currency, amount in item.currencies.items %}
-                        {{ currency }}{% if not forloop.last %}/{% endif %}
-                      {% endfor %}
-                    </span>
-                  </p>
-                  <div class="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                    <div
-                      class="bg-green-500 h-2 rounded-full"
-                      style="width: {{ item.total|floatformat:0 }}%"
-                    ></div>
-                  </div>
-                </div>
+                <p class="text-sm font-bold text-gray-700">
+                  {{ item.total|floatformat:2|intcomma }}
+                  <span class="text-xs text-gray-500">
+                    {% for currency, amount in item.currencies.items %}
+                      {{ currency }}{% if not forloop.last %}/{% endif %}
+                    {% endfor %}
+                  </span>
+                </p>
               </div>
             {% endfor %}
           </div>
@@ -224,6 +196,92 @@
       </div>
     </div>
   </div>
-
-  {% endblock %}
 </div>
+
+<script>
+  // Spending Pie Chart
+  {% if top_spending %}
+  const spendingCtx = document.getElementById('spendingPieChart').getContext('2d');
+  const spendingData = {
+    labels: [{% for item in top_spending %}'{{ item.category }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+    datasets: [{
+      data: [{% for item in top_spending %}{{ item.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+      backgroundColor: [
+        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'
+      ],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  };
+  
+  new Chart(spendingCtx, {
+    type: 'doughnut',
+    data: spendingData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.label || '';
+              let value = context.parsed || 0;
+              let total = context.dataset.data.reduce((a, b) => a + b, 0);
+              let percentage = ((value / total) * 100).toFixed(1);
+              return label + ': ' + value.toLocaleString() + ' (' + percentage + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+  {% endif %}
+
+  // Income Pie Chart
+  {% if top_income %}
+  const incomeCtx = document.getElementById('incomePieChart').getContext('2d');
+  const incomeData = {
+    labels: [{% for item in top_income %}'{{ item.category }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+    datasets: [{
+      data: [{% for item in top_income %}{{ item.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+      backgroundColor: [
+        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'
+      ],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  };
+  
+  new Chart(incomeCtx, {
+    type: 'doughnut',
+    data: incomeData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.label || '';
+              let value = context.parsed || 0;
+              let total = context.dataset.data.reduce((a, b) => a + b, 0);
+              let percentage = ((value / total) * 100).toFixed(1);
+              return label + ': ' + value.toLocaleString() + ' (' + percentage + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+  {% endif %}
+</script>
+
+{% endblock %}

@@ -360,6 +360,159 @@
   </div>
 </div>
 
+<!-- Category Management Section -->
+<div class="mt-8">
+  <div class="bg-white rounded-xl shadow-md overflow-hidden">
+    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4">
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-tags-fill mr-2"></i>
+        Category Management
+      </h2>
+      <p class="text-purple-100 text-sm mt-1">
+        Search and update transaction categories
+      </p>
+    </div>
+    
+    <div class="p-6">
+      <!-- Search & Filter Bar -->
+      <div class="mb-6 flex flex-col md:flex-row gap-4">
+        <div class="flex-1">
+          <label for="searchTransactions" class="block text-sm font-medium text-gray-700 mb-2">
+            Search Transactions
+          </label>
+          <input
+            type="text"
+            id="searchTransactions"
+            placeholder="Search by description, category, or amount..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div class="w-full md:w-48">
+          <label for="filterCategory" class="block text-sm font-medium text-gray-700 mb-2">
+            Filter by Category
+          </label>
+          <select
+            id="filterCategory"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">All Categories</option>
+            {% for category in all_categories %}
+              <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="w-full md:w-auto flex items-end">
+          <button
+            id="addCategoryBtn"
+            class="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2"
+          >
+            <i class="bi bi-plus-lg"></i>
+            <span>New Category</span>
+          </button>
+        </div>
+      </div>
+          </select>
+        </div>
+      </div>
+
+      <!-- Transactions Table -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Description
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Amount
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Category
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
+            <!-- Will be populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+          Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> transactions
+        </div>
+        <div class="flex gap-2">
+          <button
+            id="prevPage"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            <i class="bi bi-chevron-left"></i> Previous
+          </button>
+          <button
+            id="nextPage"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            Next <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Category Modal -->
+<div id="createCategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4 rounded-t-xl">
+      <h3 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-tag-fill mr-2"></i>
+        Create New Category
+      </h3>
+    </div>
+    <div class="p-6">
+      <form id="createCategoryForm">
+        <div class="mb-4">
+          <label for="newCategoryName" class="block text-sm font-medium text-gray-700 mb-2">
+            Category Name
+          </label>
+          <input
+            type="text"
+            id="newCategoryName"
+            placeholder="e.g., Rent Deposit, Healthcare, Entertainment"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            id="cancelCategoryBtn"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition duration-200"
+          >
+            <i class="bi bi-plus-lg mr-1"></i>
+            Create Category
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Back Button -->
 <div class="mt-8 text-center">
   <a
@@ -370,5 +523,270 @@
     <span>Back to Dashboard</span>
   </a>
 </div>
+
+<script>
+// Category Management
+let allTransactions = [];
+let filteredTransactions = [];
+let allCategories = [];
+let currentPage = 1;
+const itemsPerPage = 20;
+
+// Fetch all transactions on page load
+async function loadTransactions() {
+  try {
+    const response = await fetch('/api/transactions/');
+    const data = await response.json();
+    allTransactions = data.transactions;
+    allCategories = data.all_categories || [];
+    filteredTransactions = allTransactions;
+    renderTable();
+  } catch (error) {
+    console.error('Error loading transactions:', error);
+  }
+}
+
+// Filter transactions based on search and category
+function filterTransactions() {
+  const searchTerm = document.getElementById('searchTransactions').value.toLowerCase();
+  const categoryFilter = document.getElementById('filterCategory').value;
+  
+  filteredTransactions = allTransactions.filter(transaction => {
+    const matchesSearch = 
+      transaction.booking_text.toLowerCase().includes(searchTerm) ||
+      transaction.category.toLowerCase().includes(searchTerm) ||
+      transaction.amount.toString().includes(searchTerm);
+    
+    const matchesCategory = !categoryFilter || transaction.category === categoryFilter;
+    
+    return matchesSearch && matchesCategory;
+  });
+  
+  currentPage = 1;
+  renderTable();
+}
+
+// Render the transactions table
+function renderTable() {
+  const tbody = document.getElementById('transactionsTableBody');
+  const start = (currentPage - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  const pageTransactions = filteredTransactions.slice(start, end);
+  
+  tbody.innerHTML = pageTransactions.map(transaction => `
+    <tr class="hover:bg-gray-50" data-id="${transaction.id}">
+      <td class="px-4 py-3 text-sm text-gray-900">
+        ${transaction.date}
+      </td>
+      <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="${transaction.booking_text}">
+        ${transaction.booking_text}
+      </td>
+      <td class="px-4 py-3 text-sm ${transaction.amount < 0 ? 'text-red-600' : 'text-green-600'} font-medium">
+        ${transaction.amount.toLocaleString()} ${transaction.currency}
+      </td>
+      <td class="px-4 py-3">
+        <select 
+          class="category-select w-full px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          data-id="${transaction.id}"
+          data-original="${transaction.category}"
+        >
+          <option value="">Uncounted</option>
+          ${allCategories.map(cat => `
+            <option value="${cat}" ${transaction.category === cat ? 'selected' : ''}>
+              ${cat}
+            </option>
+          `).join('')}
+        </select>
+      </td>
+      <td class="px-4 py-3">
+        <button 
+          onclick="saveCategory(${transaction.id})"
+          class="save-btn px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition duration-200 hidden"
+          data-id="${transaction.id}"
+        >
+          <i class="bi bi-check-lg"></i> Save
+        </button>
+      </td>
+    </tr>
+  `).join('');
+  
+  // Update pagination info
+  document.getElementById('showingCount').textContent = Math.min(end, filteredTransactions.length);
+  document.getElementById('totalCount').textContent = filteredTransactions.length;
+  
+  // Update pagination buttons
+  document.getElementById('prevPage').disabled = currentPage === 1;
+  document.getElementById('nextPage').disabled = end >= filteredTransactions.length;
+  
+  // Attach change listeners to category selects
+  document.querySelectorAll('.category-select').forEach(select => {
+    select.addEventListener('change', function() {
+      const saveBtn = document.querySelector(`button.save-btn[data-id="${this.dataset.id}"]`);
+      if (this.value !== this.dataset.original) {
+        saveBtn.classList.remove('hidden');
+      } else {
+        saveBtn.classList.add('hidden');
+      }
+    });
+  });
+}
+
+// Save category change
+async function saveCategory(transactionId) {
+  const select = document.querySelector(`.category-select[data-id="${transactionId}"]`);
+  const newCategory = select.value;
+  
+  try {
+    const response = await fetch(`/api/transactions/${transactionId}/update-category/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ category: newCategory })
+    });
+    
+    if (response.ok) {
+      // Update the original value
+      select.dataset.original = newCategory;
+      
+      // Hide save button
+      const saveBtn = document.querySelector(`button.save-btn[data-id="${transactionId}"]`);
+      saveBtn.classList.add('hidden');
+      
+      // Update the transaction in our local data
+      const transaction = allTransactions.find(t => t.id === transactionId);
+      if (transaction) {
+        transaction.category = newCategory;
+      }
+      
+      // Show success message
+      showMessage('Category updated successfully!', 'success');
+    } else {
+      showMessage('Failed to update category', 'error');
+    }
+  } catch (error) {
+    console.error('Error saving category:', error);
+    showMessage('Error updating category', 'error');
+  }
+}
+
+// Show temporary message
+function showMessage(message, type) {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+    type === 'success' ? 'bg-green-500' : 'bg-red-500'
+  } text-white`;
+  alertDiv.innerHTML = `
+    <div class="flex items-center">
+      <i class="bi bi-${type === 'success' ? 'check' : 'exclamation'}-circle-fill mr-2"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  document.body.appendChild(alertDiv);
+  
+  setTimeout(() => {
+    alertDiv.remove();
+  }, 3000);
+}
+
+// Event listeners
+document.getElementById('searchTransactions').addEventListener('input', filterTransactions);
+document.getElementById('filterCategory').addEventListener('change', filterTransactions);
+document.getElementById('prevPage').addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+});
+document.getElementById('nextPage').addEventListener('click', () => {
+  const maxPage = Math.ceil(filteredTransactions.length / itemsPerPage);
+  if (currentPage < maxPage) {
+    currentPage++;
+    renderTable();
+  }
+});
+
+// Modal functionality
+const modal = document.getElementById('createCategoryModal');
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const cancelCategoryBtn = document.getElementById('cancelCategoryBtn');
+const createCategoryForm = document.getElementById('createCategoryForm');
+
+// Open modal
+addCategoryBtn.addEventListener('click', () => {
+  modal.classList.remove('hidden');
+  document.getElementById('newCategoryName').focus();
+});
+
+// Close modal
+cancelCategoryBtn.addEventListener('click', () => {
+  modal.classList.add('hidden');
+  createCategoryForm.reset();
+});
+
+// Close modal on background click
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    modal.classList.add('hidden');
+    createCategoryForm.reset();
+  }
+});
+
+// Create new category
+createCategoryForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const categoryName = document.getElementById('newCategoryName').value.trim();
+  
+  if (!categoryName) {
+    showMessage('Please enter a category name', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/categories/create/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ name: categoryName })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.success) {
+      // Add new category to the arrays
+      allCategories.push(categoryName);
+      allCategories.sort();
+      
+      // Add new category to filter dropdown
+      const filterSelect = document.getElementById('filterCategory');
+      const option = document.createElement('option');
+      option.value = categoryName;
+      option.textContent = categoryName;
+      filterSelect.appendChild(option);
+      
+      // Close modal and reset form
+      modal.classList.add('hidden');
+      createCategoryForm.reset();
+      
+      // Re-render table to update category dropdowns
+      renderTable();
+      
+      showMessage(`Category "${categoryName}" created successfully!`, 'success');
+    } else {
+      showMessage(data.error || 'Failed to create category', 'error');
+    }
+  } catch (error) {
+    console.error('Error creating category:', error);
+    showMessage('Error creating category', 'error');
+  }
+});
+
+// Load transactions on page load
+loadTransactions();
+</script>
 
 {% endblock %}

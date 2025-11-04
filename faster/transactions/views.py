@@ -164,12 +164,22 @@ def settings_view(request):
 
         success = "Settings saved successfully"
 
+    # Get all unique categories for the category management section
+    all_categories = sorted(
+        set(
+            t.category
+            for t in Transaction.objects.all()
+            if t.category and t.category != "Uncounted"
+        )
+    )
+
     return render(
         request,
         "dashboard/settings.html",
         {
             "files": files,
             "all_currencies": all_currencies,
+            "all_categories": all_categories,
             "selected_file_ids": selected_file_ids,
             "selected_currencies": selected_currencies,
             "error": error,
@@ -505,10 +515,29 @@ def dashboard(request):
 
     # Convert to list with total and currency breakdown
     top_spending = []
-    for category, currency_amounts in expense_by_category_currency.items():
+    spending_colors = [
+        "#ef4444",
+        "#f97316",
+        "#f59e0b",
+        "#eab308",
+        "#84cc16",
+        "#22c55e",
+        "#10b981",
+        "#14b8a6",
+        "#06b6d4",
+        "#0ea5e9",
+    ]
+    for idx, (category, currency_amounts) in enumerate(
+        expense_by_category_currency.items()
+    ):
         total = sum(currency_amounts.values())
         top_spending.append(
-            {"category": category, "total": total, "currencies": dict(currency_amounts)}
+            {
+                "category": category,
+                "total": total,
+                "currencies": dict(currency_amounts),
+                "color": spending_colors[idx % len(spending_colors)],
+            }
         )
 
     # Sort by total and get top 5
@@ -523,10 +552,29 @@ def dashboard(request):
 
     # Convert to list with total and currency breakdown
     top_income = []
-    for category, currency_amounts in income_by_category_currency.items():
+    income_colors = [
+        "#22c55e",
+        "#10b981",
+        "#14b8a6",
+        "#06b6d4",
+        "#0ea5e9",
+        "#3b82f6",
+        "#6366f1",
+        "#8b5cf6",
+        "#a855f7",
+        "#d946ef",
+    ]
+    for idx, (category, currency_amounts) in enumerate(
+        income_by_category_currency.items()
+    ):
         total = sum(currency_amounts.values())
         top_income.append(
-            {"category": category, "total": total, "currencies": dict(currency_amounts)}
+            {
+                "category": category,
+                "total": total,
+                "currencies": dict(currency_amounts),
+                "color": income_colors[idx % len(income_colors)],
+            }
         )
 
     # Sort by total and get top 5
@@ -573,3 +621,110 @@ def delete_file(request, file_id):
 
     # Redirect back to the referrer or dashboard
     return redirect(request.META.get("HTTP_REFERER", "/"))
+
+
+# API Endpoints for Category Management
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+
+def api_get_transactions(request):
+    """API endpoint to get all transactions with their details"""
+    from .models import Transaction
+
+    # Get filters from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
+    # Filter transactions based on session settings
+    qs = Transaction.objects.all().order_by("-date", "-id")
+
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+    if selected_currencies:
+        qs = qs.filter(currency__in=selected_currencies)
+
+    transactions = [
+        {
+            "id": t.id,
+            "date": t.date,
+            "booking_text": t.booking_text,
+            "category": t.category if t.category else "Uncounted",
+            "amount": float(t.amount) if t.amount else 0.0,
+            "currency": t.currency if t.currency else "",
+        }
+        for t in qs[:500]  # Limit to 500 most recent transactions
+    ]
+
+    # Get all unique categories
+    all_categories = sorted(
+        set(t["category"] for t in transactions if t["category"] != "Uncounted")
+    )
+
+    return JsonResponse(
+        {"transactions": transactions, "all_categories": all_categories}
+    )
+
+
+@require_http_methods(["POST"])
+def api_update_category(request, transaction_id):
+    """API endpoint to update a transaction's category"""
+    import json
+
+    from .models import Transaction
+
+    try:
+        data = json.loads(request.body)
+        new_category = data.get("category", "")
+
+        transaction = Transaction.objects.get(id=transaction_id)
+        transaction.category = new_category
+        transaction.save()
+
+        return JsonResponse({"success": True, "category": new_category})
+    except Transaction.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "error": "Transaction not found"}, status=404
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+def api_create_category(request):
+    """API endpoint to create a new category"""
+    import json
+
+    try:
+        data = json.loads(request.body)
+        category_name = data.get("name", "").strip()
+
+        if not category_name:
+            return JsonResponse(
+                {"success": False, "error": "Category name is required"}, status=400
+            )
+
+        # Check if category already exists (case-insensitive)
+        from .models import Transaction
+
+        existing_categories = set(
+            t.category.lower()
+            for t in Transaction.objects.all()
+            if t.category and t.category != "Uncounted"
+        )
+
+        if category_name.lower() in existing_categories:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Category '{category_name}' already exists",
+                },
+                status=400,
+            )
+
+        # Category will be available for use in transaction dropdowns
+        # We don't need to store it separately - it's stored when assigned to transactions
+        return JsonResponse({"success": True, "category": category_name})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
