@@ -1,148 +1,274 @@
 {% extends "base.html" %} {% block content %}
-<div class="container mt-4">
-  <h2 class="text-center mb-4">Expenses vs Income</h2>
 
-  <!-- Current Filters Info -->
-  <div class="alert alert-info mb-3">
-    <strong>Active Filters:</strong>
-    {% if selected_file_ids %} {{ selected_file_ids|length }} file(s) selected
-    {% else %} All files {% endif %} | {% if selected_currencies %} {{
-    selected_currencies|join:", " }} {% else %} All currencies {% endif %}
+<!-- Header -->
+<div class="mb-8">
+  <h1 class="text-4xl font-bold text-gray-900 mb-2">
+    <i class="bi bi-graph-up-arrow text-green-600"></i>
+    Expenses vs Income
+  </h1>
+  <p class="text-gray-600">
+    Compare your spending against your earnings to track your financial balance
+  </p>
+</div>
+
+<!-- Active Filters Banner -->
+<div
+  class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-lg shadow-sm"
+>
+  <div class="flex items-center justify-between">
+    <div class="flex items-center">
+      <i class="bi bi-funnel-fill text-indigo-600 text-xl mr-3"></i>
+      <div>
+        <p class="font-semibold text-gray-800">Active Filters</p>
+        <p class="text-sm text-gray-600">
+          {% if selected_file_ids %} {{ selected_file_ids|length }} file(s)
+          selected {% else %} All files {% endif %} | {% if selected_currencies
+          %} {{ selected_currencies|join:", " }} {% else %} All currencies {%
+          endif %}
+        </p>
+      </div>
+    </div>
     <a
       href="{% url 'settings' %}"
-      class="btn btn-sm btn-outline-primary float-end"
+      class="bg-white hover:bg-gray-50 text-indigo-700 px-4 py-2 rounded-lg font-semibold transition duration-200 flex items-center space-x-2 shadow-sm border border-indigo-200"
     >
-      <i class="bi bi-gear"></i> Change Filters
+      <i class="bi bi-gear-fill"></i>
+      <span>Change Filters</span>
     </a>
   </div>
+</div>
 
-  <!-- Date Range Filter -->
-  <form method="get" id="datasource-form" class="mb-4">
-    <div class="form-group mb-2 d-flex flex-row align-items-end">
-      <div class="me-3">
-        <label for="start_date">Start Date:</label>
-        <input
-          type="date"
-          class="form-control"
-          id="start_date"
-          name="start_date"
-          value="{{ start_date|default:'' }}"
-        />
-      </div>
-      <div class="me-3">
-        <label for="end_date">End Date:</label>
-        <input
-          type="date"
-          class="form-control"
-          id="end_date"
-          name="end_date"
-          value="{{ end_date|default:'' }}"
-        />
-      </div>
-      <button type="submit" class="btn btn-primary">Apply Date Filter</button>
+<!-- Date Range Filter -->
+<div class="bg-white rounded-xl shadow-md p-6 mb-6">
+  <form
+    method="get"
+    id="datasource-form"
+    class="flex flex-wrap items-end gap-4"
+  >
+    <div class="flex-1 min-w-[200px]">
+      <label
+        for="start_date"
+        class="block text-sm font-semibold text-gray-700 mb-2"
+      >
+        <i class="bi bi-calendar-event mr-1"></i>
+        Start Date
+      </label>
+      <input
+        type="date"
+        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
+        id="start_date"
+        name="start_date"
+        value="{{ start_date|default:'' }}"
+      />
     </div>
+    <div class="flex-1 min-w-[200px]">
+      <label
+        for="end_date"
+        class="block text-sm font-semibold text-gray-700 mb-2"
+      >
+        <i class="bi bi-calendar-event mr-1"></i>
+        End Date
+      </label>
+      <input
+        type="date"
+        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
+        id="end_date"
+        name="end_date"
+        value="{{ end_date|default:'' }}"
+      />
+    </div>
+    <button
+      type="submit"
+      class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-700 transition duration-200 flex items-center space-x-2 shadow-md"
+    >
+      <i class="bi bi-search"></i>
+      <span>Apply Filter</span>
+    </button>
   </form>
-  <div class="row justify-content-center align-items-start mb-4">
-    <div class="col-md-8 d-flex flex-column align-items-center">
-      <canvas
-        id="incomeExpenseChart"
-        style="max-width: 100%; height: 400px"
-      ></canvas>
+</div>
+
+<!-- Chart and Category Filter Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <!-- Chart -->
+  <div
+    class="lg:col-span-2 bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition duration-300"
+  >
+    <div
+      class="bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl"
+    >
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-bar-chart-line-fill mr-2"></i>
+        Income vs Expenses Comparison
+      </h2>
     </div>
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header">Show Categories</div>
-        <div class="card-body" id="category-checkboxes">
-          {% for category, total in filtered_category_totals.items %}
-          <div class="form-check">
-            <input
-              class="form-check-input category-filter"
-              type="checkbox"
-              value="{{ category }}"
-              id="cat-{{ forloop.counter }}"
-              checked
-            />
-            <label class="form-check-label" for="cat-{{ forloop.counter }}"
-              >{{ category }}</label
-            >
-          </div>
-          {% endfor %}
-        </div>
-      </div>
+    <div class="relative" style="height: 400px">
+      <canvas id="incomeExpenseChart"></canvas>
     </div>
   </div>
-  <div class="accordion" id="dashboardAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingTransactions">
-        <button
-          class="accordion-button"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#collapseTransactions"
-          aria-expanded="true"
-          aria-controls="collapseTransactions"
-        >
-          Transactions
-        </button>
+
+  <!-- Category Filters -->
+  <div
+    class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+  >
+    <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-tags-fill mr-2"></i>
+        Show Categories
       </h2>
-      <div
-        id="collapseTransactions"
-        class="accordion-collapse collapse show"
-        aria-labelledby="headingTransactions"
-        data-bs-parent="#dashboardAccordion"
+    </div>
+    <div class="p-6 max-h-[400px] overflow-y-auto" id="category-checkboxes">
+      {% for category, total in filtered_category_totals.items %}
+      <label
+        class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200 mb-2"
       >
-        <div class="accordion-body">
-          <table class="table table-striped" id="transactions-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Currency</th>
-                <th>Category</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for tx in transactions %} {% if tx.Category != 'Uncounted' %}
-              <tr data-category="{{ tx.Category }}">
-                <td>{{ tx.Date }}</td>
-                <td>{{ tx.Booking_text }}</td>
-                <td>{{ tx.Amount|floatformat:2 }}</td>
-                <td>{{ tx.Currency }}</td>
-                <td>{{ tx.Category }}</td>
-              </tr>
-              {% endif %} {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <input
+          class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 category-filter"
+          type="checkbox"
+          value="{{ category }}"
+          id="cat-{{ forloop.counter }}"
+          checked
+        />
+        <span class="ml-3 text-sm font-medium text-gray-900"
+          >{{ category }}</span
+        >
+        <span
+          class="ml-auto text-xs font-semibold {% if total < 0 %}text-red-600{% else %}text-green-600{% endif %}"
+        >
+          {{ total|floatformat:2 }}
+        </span>
+      </label>
+      {% endfor %}
     </div>
   </div>
 </div>
+
+<!-- Transactions Table -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+  <button
+    onclick="toggleSection('transactions')"
+    class="w-full bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-purple-600 hover:to-pink-700 transition duration-200"
+  >
+    <h2 class="text-xl font-bold text-white flex items-center">
+      <i class="bi bi-receipt mr-2"></i>
+      All Transactions
+    </h2>
+    <i class="bi bi-chevron-down text-white text-xl" id="transactions-icon"></i>
+  </button>
+  <div id="transactions-content" class="p-6">
+    <div class="overflow-x-auto">
+      <table
+        class="min-w-full divide-y divide-gray-200"
+        id="transactions-table"
+      >
+        <thead>
+          <tr class="bg-gray-50">
+            <th
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Date
+            </th>
+            <th
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Description
+            </th>
+            <th
+              class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Amount
+            </th>
+            <th
+              class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Currency
+            </th>
+            <th
+              class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Category
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for tx in transactions %} {% if tx.Category != 'Uncounted' %}
+          <tr
+            data-category="{{ tx.Category }}"
+            class="hover:bg-gray-50 transition duration-200"
+          >
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {{ tx.Date }}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-900">
+              {{ tx.Booking_text }}
+            </td>
+            <td
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold {% if tx.Amount < 0 %}text-red-600{% else %}text-green-600{% endif %}"
+            >
+              {{ tx.Amount|floatformat:2 }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              <span
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800"
+                >{{ tx.Currency }}</span
+              >
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {% if tx.Amount < 0 %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}"
+              >
+                {{ tx.Category }}
+              </span>
+            </td>
+          </tr>
+          {% endif %} {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // Toggle sections
+  function toggleSection(section) {
+    const content = document.getElementById(section + "-content");
+    const icon = document.getElementById(section + "-icon");
+
+    if (content.classList.contains("hidden")) {
+      content.classList.remove("hidden");
+      icon.classList.remove("bi-chevron-right");
+      icon.classList.add("bi-chevron-down");
+    } else {
+      content.classList.add("hidden");
+      icon.classList.remove("bi-chevron-down");
+      icon.classList.add("bi-chevron-right");
+    }
+  }
+
   // Filter table by selected categories
   document.querySelectorAll(".category-filter").forEach(function (checkbox) {
     checkbox.addEventListener("change", function () {
       const checkedCategories = Array.from(
         document.querySelectorAll(".category-filter:checked")
       ).map((cb) => cb.value);
-      // Table rows
+
+      // Update table
       document
         .querySelectorAll("#transactions-table tbody tr")
         .forEach(function (row) {
-          if (checkedCategories.includes(row.getAttribute("data-category"))) {
-            row.style.display = "";
-          } else {
-            row.style.display = "none";
-          }
+          row.style.display = checkedCategories.includes(
+            row.getAttribute("data-category")
+          )
+            ? ""
+            : "none";
         });
     });
   });
 
+  // Chart.js setup
   const chartData = JSON.parse("{{ chart_data|safe|escapejs }}");
   const ctx = document.getElementById("incomeExpenseChart").getContext("2d");
+
   let chart = new Chart(ctx, {
     type: "bar",
     data: {
@@ -152,16 +278,53 @@
           label: "Amount",
           data: chartData.amounts,
           backgroundColor: [
-            "rgba(255, 99, 132, 0.5)",
-            "rgba(54, 162, 235, 0.5)",
+            "rgba(239, 68, 68, 0.7)", // Red for expenses
+            "rgba(34, 197, 94, 0.7)", // Green for income
           ],
+          borderColor: ["rgba(239, 68, 68, 1)", "rgba(34, 197, 94, 1)"],
+          borderWidth: 2,
+          borderRadius: 8,
         },
       ],
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
+          padding: 12,
+          titleFont: { size: 14, weight: "bold" },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: function (context) {
+              return (
+                context.label +
+                ": " +
+                Math.abs(context.parsed.y).toFixed(2) +
+                " CHF"
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)",
+          },
+          ticks: {
+            callback: function (value) {
+              return value.toFixed(0) + " CHF";
+            },
+          },
+        },
+        x: {
+          grid: {
+            display: false,
+          },
+        },
       },
     },
   });

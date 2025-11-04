@@ -1,164 +1,264 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block content %}
+<!-- Header -->
+<div class="mb-8">
+  <h1 class="text-4xl font-bold text-gray-900 mb-2">
+    <i class="bi bi-gear-fill text-indigo-600"></i>
+    Settings & Data Management
+  </h1>
+  <p class="text-gray-600">
+    Upload bank statements, manage filters, and control your financial data
+  </p>
+</div>
 
-{% block content %}
-<h1 class="text-center mb-4">Settings & Data Management</h1>
-
+<!-- Success/Error Messages -->
 {% if success %}
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-  {{ success }}
-  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div
+  class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg shadow-sm"
+>
+  <div class="flex items-center">
+    <i class="bi bi-check-circle-fill text-green-500 text-xl mr-3"></i>
+    <p class="text-green-800 font-medium">{{ success }}</p>
+  </div>
+</div>
+{% endif %} {% if error %}
+<div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg shadow-sm">
+  <div class="flex items-center">
+    <i class="bi bi-exclamation-circle-fill text-red-500 text-xl mr-3"></i>
+    <p class="text-red-800 font-medium">{{ error }}</p>
+  </div>
 </div>
 {% endif %}
 
-{% if error %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-  {{ error }}
-  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-{% endif %}
-
-<div class="row">
-  <!-- Upload Section -->
-  <div class="col-md-4">
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Upload New Statement</h5>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Left Column: Upload & Filters -->
+  <div class="space-y-6">
+    <!-- Upload Section -->
+    <div
+      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+    >
+      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-cloud-upload-fill mr-2"></i>
+          Upload Statement
+        </h2>
       </div>
-      <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+      <div class="p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
           {% csrf_token %}
-          <div class="mb-3">
-            <label for="csv_file" class="form-label">Select CSV File</label>
-            <input
-              type="file"
-              class="form-control"
-              id="csv_file"
-              name="csv_file"
-              accept=".csv"
-              required
-            />
-            <small class="form-text text-muted">
-              Supported: ZKB & Revolut statements
-            </small>
+          <div>
+            <label
+              for="csv_file"
+              class="block text-sm font-semibold text-gray-700 mb-2"
+            >
+              Select CSV File
+            </label>
+            <div class="relative">
+              <input
+                type="file"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                id="csv_file"
+                name="csv_file"
+                accept=".csv"
+                required
+              />
+            </div>
+            <p class="mt-2 text-xs text-gray-500 flex items-center">
+              <i class="bi bi-info-circle mr-1"></i>
+              Supports ZKB & Revolut bank statements
+            </p>
           </div>
-          <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-upload"></i> Upload
+          <button
+            type="submit"
+            class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transition duration-200 flex items-center justify-center space-x-2 shadow-md"
+          >
+            <i class="bi bi-upload"></i>
+            <span>Upload Statement</span>
           </button>
         </form>
       </div>
     </div>
 
     <!-- Filters Section -->
-    <div class="card shadow-sm">
-      <div class="card-header bg-success text-white">
-        <h5 class="mb-0">Data Filters</h5>
+    <div
+      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+    >
+      <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-funnel-fill mr-2"></i>
+          Data Filters
+        </h2>
       </div>
-      <div class="card-body">
-        <form method="post">
+      <div class="p-6">
+        <form method="post" class="space-y-6">
           {% csrf_token %}
 
           <!-- Source Files Filter -->
-          <div class="mb-4">
-            <h6 class="text-muted">Source Files</h6>
-            <small class="text-muted d-block mb-2">
-              Select which uploaded files to include in analysis
-            </small>
-            {% if files %}
-              {% for file in files %}
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    name="file"
-                    value="{{ file.id }}"
-                    id="file_{{ file.id }}"
-                    {% if file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
-                  />
-                  <label class="form-check-label" for="file_{{ file.id }}">
-                    {{ file.name }}
-                    <small class="text-muted">({{ file.uploaded_at|date:"Y-m-d H:i" }})</small>
-                  </label>
-                </div>
-              {% endfor %}
-            {% else %}
-              <p class="text-muted small">No files uploaded yet</p>
-            {% endif %}
+          <div>
+            <h3
+              class="text-sm font-semibold text-gray-700 mb-2 flex items-center"
+            >
+              <i class="bi bi-file-earmark-text mr-2 text-green-600"></i>
+              Source Files
+            </h3>
+            <p class="text-xs text-gray-500 mb-3">
+              Select files to include in analysis
+            </p>
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-2">
+              {% if files %} {% for file in files %}
+              <label
+                class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200"
+              >
+                <input type="checkbox" name="file" value="{{ file.id }}"
+                class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300
+                rounded focus:ring-green-500" {% if file.id|stringformat:"s" in
+                selected_file_ids %}checked{% endif %} />
+                <span class="ml-3 text-sm">
+                  <span class="font-medium text-gray-900">{{ file.name }}</span>
+                  <span class="text-gray-500 block text-xs"
+                    >{{ file.uploaded_at|date:"M d, Y H:i" }}</span
+                  >
+                </span>
+              </label>
+              {% endfor %} {% else %}
+              <p class="text-sm text-gray-500 italic text-center py-4">
+                No files uploaded yet
+              </p>
+              {% endif %}
+            </div>
           </div>
 
           <!-- Currency Filter -->
-          <div class="mb-4">
-            <h6 class="text-muted">Currencies</h6>
-            <small class="text-muted d-block mb-2">
-              Select which currencies to include in analysis
-            </small>
-            {% if all_currencies %}
-              {% for currency in all_currencies %}
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    name="currency"
-                    value="{{ currency }}"
-                    id="currency_{{ currency }}"
-                    {% if currency in selected_currencies %}checked{% endif %}
-                  />
-                  <label class="form-check-label" for="currency_{{ currency }}">
-                    {{ currency }}
-                  </label>
-                </div>
-              {% endfor %}
-            {% else %}
-              <p class="text-muted small">No currencies found</p>
-            {% endif %}
+          <div>
+            <h3
+              class="text-sm font-semibold text-gray-700 mb-2 flex items-center"
+            >
+              <i class="bi bi-currency-exchange mr-2 text-green-600"></i>
+              Currencies
+            </h3>
+            <p class="text-xs text-gray-500 mb-3">
+              Select currencies to include
+            </p>
+            <div class="flex flex-wrap gap-2">
+              {% if all_currencies %} {% for currency in all_currencies %}
+              <label
+                class="inline-flex items-center px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200"
+              >
+                <input
+                  type="checkbox"
+                  name="currency"
+                  value="{{ currency }}"
+                  class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+                  {%
+                  if
+                  currency
+                  in
+                  selected_currencies
+                  %}checked{%
+                  endif
+                  %}
+                />
+                <span class="ml-2 text-sm font-semibold text-gray-700"
+                  >{{ currency }}</span
+                >
+              </label>
+              {% endfor %} {% else %}
+              <p class="text-sm text-gray-500 italic">No currencies found</p>
+              {% endif %}
+            </div>
           </div>
 
-          <button type="submit" class="btn btn-success w-100">
-            <i class="bi bi-check-circle"></i> Save Filters
+          <button
+            type="submit"
+            class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition duration-200 flex items-center justify-center space-x-2 shadow-md"
+          >
+            <i class="bi bi-check-circle-fill"></i>
+            <span>Apply Filters</span>
           </button>
-          <small class="text-muted d-block mt-2 text-center">
-            Filters will apply to all analytics views
-          </small>
+          <p class="text-xs text-gray-500 text-center">
+            Filters apply to all analytics views
+          </p>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Manage Data Sources -->
-  <div class="col-md-8">
-    <div class="card shadow-sm">
-      <div class="card-header bg-warning text-dark">
-        <h5 class="mb-0">Manage Uploaded Files</h5>
+  <!-- Right Column: Manage Files & Status -->
+  <div class="lg:col-span-2 space-y-6">
+    <!-- Manage Files -->
+    <div
+      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+    >
+      <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-folder-fill mr-2"></i>
+          Uploaded Files
+        </h2>
       </div>
-      <div class="card-body">
+      <div class="p-6">
         {% if files %}
-        <div class="table-responsive">
-          <table class="table table-hover">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
             <thead>
-              <tr>
-                <th>Filename</th>
-                <th>Upload Date</th>
-                <th>Transactions</th>
-                <th>Actions</th>
+              <tr class="bg-gray-50">
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                >
+                  Filename
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                >
+                  Upload Date
+                </th>
+                <th
+                  class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                >
+                  Transactions
+                </th>
+                <th
+                  class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-white divide-y divide-gray-200">
               {% for file in files %}
-              <tr>
-                <td>{{ file.name }}</td>
-                <td>{{ file.uploaded_at|date:"Y-m-d H:i" }}</td>
-                <td>
-                  <span class="badge bg-info">{{ file.transaction_set.count }}</span>
+              <tr class="hover:bg-gray-50 transition duration-200">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <i
+                      class="bi bi-file-earmark-text text-indigo-600 text-xl mr-3"
+                    ></i>
+                    <span class="text-sm font-medium text-gray-900"
+                      >{{ file.name }}</span
+                    >
+                  </div>
                 </td>
-                <td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ file.uploaded_at|date:"M d, Y H:i" }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <span
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800"
+                  >
+                    {{ file.transaction_set.count }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
                   <form
                     method="post"
                     action="{% url 'delete_file' file.id %}"
-                    style="display: inline"
-                    onsubmit="return confirm('Are you sure you want to delete {{ file.name }} and all its transactions? This cannot be undone.');"
+                    class="inline"
+                    onsubmit="return confirm('⚠️ Delete {{ file.name }} and all its transactions? This cannot be undone.');"
                   >
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger">
-                      <i class="bi bi-trash"></i> Delete
+                    <button
+                      type="submit"
+                      class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition duration-200 flex items-center space-x-1"
+                    >
+                      <i class="bi bi-trash-fill"></i>
+                      <span>Delete</span>
                     </button>
                   </form>
                 </td>
@@ -168,10 +268,13 @@
           </table>
         </div>
         {% else %}
-        <div class="text-center py-5">
-          <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc"></i>
-          <p class="text-muted mt-3">
-            No files uploaded yet. Upload a CSV file to get started.
+        <div class="text-center py-12">
+          <i class="bi bi-inbox text-gray-300 text-6xl"></i>
+          <p class="text-gray-500 mt-4 text-lg font-medium">
+            No files uploaded yet
+          </p>
+          <p class="text-gray-400 mt-2">
+            Upload a CSV file to get started with your financial analysis
           </p>
         </div>
         {% endif %}
@@ -179,40 +282,68 @@
     </div>
 
     <!-- Current Filter Status -->
-    <div class="card shadow-sm mt-4">
-      <div class="card-header bg-info text-white">
-        <h5 class="mb-0">Current Filter Status</h5>
+    <div
+      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+    >
+      <div class="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-sliders mr-2"></i>
+          Active Filters
+        </h2>
       </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <h6>Selected Files:</h6>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3
+              class="text-sm font-semibold text-gray-700 mb-3 flex items-center"
+            >
+              <i class="bi bi-files mr-2 text-purple-600"></i>
+              Selected Files
+            </h3>
             {% if selected_file_ids %}
-              <ul class="list-unstyled">
-                {% for file in files %}
-                  {% if file.id|stringformat:"s" in selected_file_ids %}
-                    <li>
-                      <i class="bi bi-check-circle-fill text-success"></i> {{ file.name }}
-                    </li>
-                  {% endif %}
-                {% endfor %}
-              </ul>
+            <ul class="space-y-2">
+              {% for file in files %} {% if file.id|stringformat:"s" in
+              selected_file_ids %}
+              <li
+                class="flex items-center text-sm bg-purple-50 px-3 py-2 rounded-lg"
+              >
+                <i class="bi bi-check-circle-fill text-purple-600 mr-2"></i>
+                <span class="text-gray-700">{{ file.name }}</span>
+              </li>
+              {% endif %} {% endfor %}
+            </ul>
             {% else %}
-              <p class="text-muted"><em>All files included</em></p>
+            <p
+              class="text-gray-500 italic text-sm bg-gray-50 px-4 py-3 rounded-lg"
+            >
+              All files included
+            </p>
             {% endif %}
           </div>
-          <div class="col-md-6">
-            <h6>Selected Currencies:</h6>
+          <div>
+            <h3
+              class="text-sm font-semibold text-gray-700 mb-3 flex items-center"
+            >
+              <i class="bi bi-cash-stack mr-2 text-purple-600"></i>
+              Selected Currencies
+            </h3>
             {% if selected_currencies %}
-              <ul class="list-unstyled">
-                {% for currency in selected_currencies %}
-                  <li>
-                    <i class="bi bi-check-circle-fill text-success"></i> {{ currency }}
-                  </li>
-                {% endfor %}
-              </ul>
+            <div class="flex flex-wrap gap-2">
+              {% for currency in selected_currencies %}
+              <span
+                class="inline-flex items-center px-3 py-2 bg-purple-100 text-purple-800 rounded-lg text-sm font-semibold"
+              >
+                <i class="bi bi-check-circle-fill mr-1"></i>
+                {{ currency }}
+              </span>
+              {% endfor %}
+            </div>
             {% else %}
-              <p class="text-muted"><em>All currencies included</em></p>
+            <p
+              class="text-gray-500 italic text-sm bg-gray-50 px-4 py-3 rounded-lg"
+            >
+              All currencies included
+            </p>
             {% endif %}
           </div>
         </div>
@@ -221,9 +352,14 @@
   </div>
 </div>
 
-<div class="mt-4 text-center">
-  <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left"></i> Back to Dashboard
+<!-- Back Button -->
+<div class="mt-8 text-center">
+  <a
+    href="{% url 'dashboard' %}"
+    class="inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition duration-200 space-x-2"
+  >
+    <i class="bi bi-arrow-left"></i>
+    <span>Back to Dashboard</span>
   </a>
 </div>
 
