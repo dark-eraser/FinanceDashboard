@@ -187,9 +187,9 @@ def convert_zkb_to_normalized(df):
 
     normalized["amount"] = df.apply(compute_amount, axis=1)
 
-    # Map Curr to currency
+    # Map Curr to currency, default empty values to CHF
     if "Curr" in df.columns:
-        normalized["currency"] = df["Curr"]
+        normalized["currency"] = df["Curr"].replace("", "CHF").fillna("CHF")
     else:
         normalized["currency"] = "CHF"
 
@@ -310,7 +310,7 @@ def categorize_transaction(description, merchant_mapping):
 
     Priority order:
     1. Check merchant mapping (exact match)
-    2. Check CATEGORY_KEYWORDS (substring match)
+    2. Check CATEGORY_KEYWORDS (substring match, longest keyword first for specificity)
     3. Default to "Uncounted"
     """
     if not description or pd.isna(description):
@@ -323,11 +323,19 @@ def categorize_transaction(description, merchant_mapping):
     if desc_str in merchant_mapping:
         return merchant_mapping[desc_str]
 
-    # 2. Check CATEGORY_KEYWORDS (substring match, priority order)
+    # 2. Check CATEGORY_KEYWORDS (substring match, check longest keywords first)
+    # Build a list of all (category, keyword) tuples and sort by keyword length (descending)
+    all_keywords = []
     for category, keywords in CATEGORY_KEYWORDS.items():
         for keyword in keywords:
-            if keyword in desc_lower:
-                return category
+            all_keywords.append((category, keyword))
+
+    # Sort by keyword length (longest first) to prioritize more specific matches
+    all_keywords.sort(key=lambda x: len(x[1]), reverse=True)
+
+    for category, keyword in all_keywords:
+        if keyword in desc_lower:
+            return category
 
     # 3. Default
     return "Uncounted"

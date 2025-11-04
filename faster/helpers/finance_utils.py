@@ -171,6 +171,17 @@ CATEGORY_KEYWORDS = {
         "ticketcorner",
     ],
     "Fee": ["fee", "charge", "gebühr"],
+    "Vault": [
+        "pocket withdrawal",  # More specific, must come before "withdrawal"
+        "to pocket",
+        "from pocket",
+        "pocket",
+        "vault",
+        "to chf tablet",
+        "to chf gaming rig",
+        "to eur",
+        "to chf",
+    ],
     "Cash Withdrawal": [
         "atm",
         "cash withdrawal",
@@ -189,15 +200,9 @@ CATEGORY_KEYWORDS = {
         "topup",
         "payment from david georges j colonna",
     ],
-    "Vault": [
-        "pocket",
-        "vault",
-        "pocket withdrawal",
-        "to chf tablet",
-        "to chf gaming rig",
-    ],
     "Refund": ["refund", "refunded", "reimbursement"],
     "Rent": [
+        "kajetan",  # TWINT transfers to Kajetan for rent
         "rent",
         "miete",
         "immobilien",
