@@ -98,7 +98,7 @@
                 </div>
                 <p class="text-sm font-bold text-gray-700">
                   {{ item.total|floatformat:2|intcomma }}
-                  <span class="text-xs text-gray-500">
+                  <span class="text-xs text-gray-500"> 
                     {% for currency, amount in item.currencies.items %}
                       {{ currency }}{% if not forloop.last %}/{% endif %}
                     {% endfor %}
@@ -198,90 +198,644 @@
   </div>
 </div>
 
-<script>
-  // Spending Pie Chart
-  {% if top_spending %}
-  const spendingCtx = document.getElementById('spendingPieChart').getContext('2d');
-  const spendingData = {
-    labels: [{% for item in top_spending %}'{{ item.category }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-    datasets: [{
-      data: [{% for item in top_spending %}{{ item.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-      backgroundColor: [
-        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'
-      ],
-      borderWidth: 2,
-      borderColor: '#fff'
-    }]
-  };
-  
-  new Chart(spendingCtx, {
-    type: 'doughnut',
-    data: spendingData,
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              let label = context.label || '';
-              let value = context.parsed || 0;
-              let total = context.dataset.data.reduce((a, b) => a + b, 0);
-              let percentage = ((value / total) * 100).toFixed(1);
-              return label + ': ' + value.toLocaleString() + ' (' + percentage + '%)';
-            }
-          }
-        }
-      }
-    }
-  });
-  {% endif %}
+<!-- Compact Time Filter (Bottom Right) -->
+<div class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-40">
+  <div class="flex flex-col gap-2">
+    <div class="text-xs font-semibold text-gray-600 mb-1">
+      <i class="bi bi-calendar-range text-indigo-600"></i> Time Period
+    </div>
+    
+    <div class="flex flex-col gap-1">
+      <button
+        type="button"
+        onclick="setTimeFilter('all')"
+        id="filter-all"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white"
+      >
+        All Time
+      </button>
+      <button
+        type="button"
+        onclick="setTimeFilter('last_year')"
+        id="filter-last_year"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      >
+        Last Year
+      </button>
+      <button
+        type="button"
+        onclick="toggleCustomDateRange()"
+        id="filter-custom"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      >
+        Custom
+      </button>
+    </div>
 
-  // Income Pie Chart
-  {% if top_income %}
-  const incomeCtx = document.getElementById('incomePieChart').getContext('2d');
-  const incomeData = {
-    labels: [{% for item in top_income %}'{{ item.category }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-    datasets: [{
-      data: [{% for item in top_income %}{{ item.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-      backgroundColor: [
-        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'
-      ],
-      borderWidth: 2,
-      borderColor: '#fff'
-    }]
-  };
+    <!-- Custom Date Range Inputs (Hidden by default) -->
+    <div id="customDateInputs" class="hidden mt-2 space-y-2">
+      <input
+        type="date"
+        id="startDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+      <input
+        type="date"
+        id="endDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+      <button
+        type="button"
+        onclick="applyCustomDateRange()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium transition duration-200"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Side Panel for Category Details -->
+<div id="categoryDetailPanel" class="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-50">
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div id="panelHeader" class="px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h3 id="panelTitle" class="text-xl font-bold text-gray-900"></h3>
+        <button onclick="closeCategoryPanel()" class="text-gray-500 hover:text-gray-700">
+          <i class="bi bi-x-lg text-2xl"></i>
+        </button>
+      </div>
+      <p id="panelAmount" class="text-2xl font-bold mt-2"></p>
+    </div>
+    
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto px-6 pb-6">
+      <div id="panelContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay -->
+<div id="panelOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40" onclick="closeCategoryPanel()"></div>
+
+<script>
+window.testFunction = function() {
+  console.log('Script is loading correctly!');
+  return true;
+};
+
+function setTimeFilter(period) {
+  console.log('setTimeFilter called with period:', period);
   
-  new Chart(incomeCtx, {
-    type: 'doughnut',
-    data: incomeData,
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              let label = context.label || '';
-              let value = context.parsed || 0;
-              let total = context.dataset.data.reduce((a, b) => a + b, 0);
-              let percentage = ((value / total) * 100).toFixed(1);
-              return label + ': ' + value.toLocaleString() + ' (' + percentage + '%)';
+  // Update UI
+  document.querySelectorAll('.time-filter-btn').forEach(btn => {
+    btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+  });
+  document.getElementById('filter-' + period).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+  
+  // Hide custom inputs
+  document.getElementById('customDateInputs').classList.add('hidden');
+  
+  // Set session storage
+  sessionStorage.setItem('timeFilter', period);
+  sessionStorage.removeItem('customStartDate');
+  sessionStorage.removeItem('customEndDate');
+  
+  // Load data dynamically
+  console.log('Calling loadDashboardData with:', '?time_filter=' + period);
+  loadDashboardData('?time_filter=' + period);
+}
+
+function toggleCustomDateRange() {
+  const customInputs = document.getElementById('customDateInputs');
+  const isHidden = customInputs.classList.contains('hidden');
+  
+  if (isHidden) {
+    customInputs.classList.remove('hidden');
+    // Update button style
+    document.querySelectorAll('.time-filter-btn').forEach(btn => {
+      btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+    });
+    document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+  } else {
+    customInputs.classList.add('hidden');
+  }
+}
+
+function applyCustomDateRange() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  
+  if (!startDate || !endDate) {
+    alert('Please select both start and end dates');
+    return;
+  }
+  
+  // Set session storage
+  sessionStorage.setItem('timeFilter', 'custom');
+  sessionStorage.setItem('customStartDate', startDate);
+  sessionStorage.setItem('customEndDate', endDate);
+  
+  // Load data dynamically
+  loadDashboardData('?time_filter=custom&start_date=' + startDate + '&end_date=' + endDate);
+}
+
+// Dynamic data loading function
+function loadDashboardData(queryParams) {
+  console.log('loadDashboardData called with queryParams:', queryParams);
+  
+  const url = '/api/dashboard-data/' + queryParams;
+  console.log('Fetching URL:', url);
+  
+  fetch(url)
+    .then(response => {
+      console.log('Response status:', response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Response data:', data);
+      console.log('Top spending data:', data.top_spending);
+      console.log('Top income data:', data.top_income);
+      
+      if (data.success) {
+        console.log('Updating charts and lists...');
+        updateCharts(data.top_spending, data.top_income);
+        updateCategoryLists(data);
+      } else {
+        console.error('Failed to load dashboard data:', data.error);
+        alert('Failed to load data. Please try again.');
+      }
+    })
+    .catch(error => {
+      console.error('Error loading dashboard data:', error);
+      alert('Network error. Please check your connection and try again.');
+    });
+}
+
+// Update charts with new data
+function updateCharts(spendingData, incomeData) {
+  console.log('updateCharts called with spending data length:', spendingData ? spendingData.length : 'null');
+  console.log('updateCharts called with income data length:', incomeData ? incomeData.length : 'null');
+  
+  // Destroy existing charts
+  if (window.spendingChart) {
+    window.spendingChart.destroy();
+    console.log('Destroyed existing spending chart');
+  }
+  if (window.incomeChart) {
+    window.incomeChart.destroy();
+    console.log('Destroyed existing income chart');
+  }
+  
+  // Small delay to ensure DOM is updated
+  setTimeout(() => {
+    console.log('Creating charts after DOM update delay...');
+    
+    // Recreate spending chart
+    if (spendingData && spendingData.length > 0) {
+      console.log('Looking for spending canvas...');
+      const spendingCanvas = document.getElementById('spendingPieChart');
+      console.log('Spending canvas found:', spendingCanvas);
+      if (spendingCanvas) {
+        console.log('Creating spending chart with data:', spendingData);
+        const spendingCtx = spendingCanvas.getContext('2d');
+        window.spendingChart = new Chart(spendingCtx, {
+          type: 'pie',
+          data: {
+            labels: spendingData.map(item => item.category),
+            datasets: [{
+              data: spendingData.map(item => Math.abs(item.total)),
+              backgroundColor: spendingData.map(item => item.color),
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const value = context.raw;
+                    return context.label + ': ' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' CHF';
+                  }
+                }
+              }
             }
           }
-        }
+        });
+        console.log('Spending chart created successfully');
+      } else {
+        console.log('Spending canvas not found!');
       }
     }
+    
+    // Recreate income chart
+    if (incomeData && incomeData.length > 0) {
+      console.log('Looking for income canvas...');
+      const incomeCanvas = document.getElementById('incomePieChart');
+      console.log('Income canvas found:', incomeCanvas);
+      if (incomeCanvas) {
+        console.log('Creating income chart with data:', incomeData);
+        const incomeCtx = incomeCanvas.getContext('2d');
+        window.incomeChart = new Chart(incomeCtx, {
+          type: 'pie',
+          data: {
+            labels: incomeData.map(item => item.category),
+            datasets: [{
+              data: incomeData.map(item => Math.abs(item.total)),
+              backgroundColor: incomeData.map(item => item.color),
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const value = context.raw;
+                    return context.label + ': ' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' CHF';
+                  }
+                }
+              }
+            }
+          }
+        });
+        console.log('Income chart created successfully');
+      } else {
+        console.log('Income canvas not found!');
+      }
+    }
+  }, 100); // 100ms delay to allow DOM update
+}
+
+// Update category lists in the UI
+function updateCategoryLists(data) {
+  console.log('updateCategoryLists called');
+  
+  // Update spending categories list
+  if (data.top_spending) {
+    console.log('Updating spending section with', data.top_spending.length, 'items');
+    updateCategorySection('spending', data.top_spending);
+  }
+  
+  // Update income categories list
+  if (data.top_income) {
+    console.log('Updating income section with', data.top_income.length, 'items');
+    updateCategorySection('income', data.top_income);
+  }
+}
+
+function updateCategorySection(type, categories) {
+  console.log('updateCategorySection called for type:', type, 'with', categories.length, 'categories');
+  
+  const sectionClass = type === 'spending' ? '.from-red-500' : '.from-green-500';
+  console.log('Looking for section with class:', sectionClass);
+  
+  const gradientElement = document.querySelector(sectionClass);
+  console.log('Gradient element found:', gradientElement);
+  
+  const section = gradientElement ? gradientElement.closest('.bg-white') : null;
+  console.log('Section found:', section);
+  
+  if (!section) {
+    console.log('No section found for type:', type);
+    return;
+  }
+  
+  const contentDiv = section.querySelector('.p-6');
+  console.log('Content div found:', contentDiv);
+  
+  if (!contentDiv) {
+    console.log('No content div found');
+    return;
+  }
+  
+  if (categories.length === 0) {
+    console.log('No categories, showing empty state');
+    // Show empty state
+    contentDiv.innerHTML = '<div class="text-center py-12"><i class="bi bi-inbox text-gray-300 text-5xl"></i><p class="text-gray-500 mt-4">No ' + type + ' data available</p><p class="text-sm text-gray-400 mt-2">Upload your bank statements to get started</p></div>';
+    return;
+  }
+  
+  console.log('Building HTML for', categories.length, 'categories');
+  
+  // Build the new HTML
+  const chartCanvasId = type === 'spending' ? 'spendingPieChart' : 'incomePieChart';
+  let html = '<div class="flex justify-center mb-6"><div class="w-80 h-80"><canvas id="' + chartCanvasId + '"></canvas></div></div><div class="space-y-2">';
+  
+  categories.forEach((item, index) => {
+    console.log('Processing category', index, ':', item.category, item.total);
+    const currencyList = Object.keys(item.currencies || {}).join('/') || 'CHF';
+    html += '<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div class="flex items-center space-x-3"><div class="w-4 h-4 rounded-full" style="background-color: ' + item.color + '"></div><p class="font-medium text-gray-900 text-sm">' + item.category + '</p></div><p class="text-sm font-bold text-gray-700">' + item.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '<span class="text-xs text-gray-500">' + currencyList + '</span></p></div>';
   });
-  {% endif %}
+  
+  html += '</div>';
+  
+  console.log('Setting innerHTML for', type, 'section');
+  console.log('HTML length:', html.length);
+  contentDiv.innerHTML = html;
+  console.log('innerHTML set successfully for', type);
+}
+
+// Initialize the charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize spending chart
+  const spendingCtx = document.getElementById('spendingPieChart');
+  if (spendingCtx) {
+    const topSpendingData = JSON.parse('{{ top_spending_json|escapejs }}');
+    
+    window.spendingChart = new Chart(spendingCtx, {
+      type: 'doughnut',
+      data: {
+        labels: topSpendingData.map(item => item.category),
+        datasets: [{
+          data: topSpendingData.map(item => item.total),
+          backgroundColor: topSpendingData.map(item => item.color),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+  
+  // Initialize income chart
+  const incomeCtx = document.getElementById('incomePieChart');
+  if (incomeCtx) {
+    const topIncomeData = JSON.parse('{{ top_income_json|escapejs }}');
+    
+    window.incomeChart = new Chart(incomeCtx, {
+      type: 'doughnut',
+      data: {
+        labels: topIncomeData.map(item => item.category),
+        datasets: [{
+          data: topIncomeData.map(item => item.total),
+          backgroundColor: topIncomeData.map(item => item.color),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+  
+  // Initialize time filter from URL or session storage
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlTimeFilter = urlParams.get('time_filter');
+  const urlStartDate = urlParams.get('start_date');
+  const urlEndDate = urlParams.get('end_date');
+  
+  let activeFilter = urlTimeFilter || sessionStorage.getItem('timeFilter') || 'all';
+  
+  // Update button styles
+  document.querySelectorAll('.time-filter-btn').forEach(btn => {
+    btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+  });
+  
+  if (activeFilter === 'custom') {
+    const startDate = urlStartDate || sessionStorage.getItem('customStartDate');
+    const endDate = urlEndDate || sessionStorage.getItem('customEndDate');
+    if (startDate && endDate) {
+      document.getElementById('startDate').value = startDate;
+      document.getElementById('endDate').value = endDate;
+      document.getElementById('customDateInputs').classList.remove('hidden');
+      document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+      
+      // Save to session storage
+      sessionStorage.setItem('customStartDate', startDate);
+      sessionStorage.setItem('customEndDate', endDate);
+    }
+  } else {
+    document.getElementById('filter-' + activeFilter).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+  }
+  
+  // Save active filter to session
+  sessionStorage.setItem('timeFilter', activeFilter);
+});
 </script>
+      }
+</script>
+
+  function closeCategoryPanel() {
+    document.getElementById('categoryDetailPanel').classList.add('translate-x-full');
+    document.getElementById('panelOverlay').classList.add('hidden');
+  }
+
+  function showCategoryPanel(category, amount, currency, type) {
+    const panel = document.getElementById('categoryDetailPanel');
+    const overlay = document.getElementById('panelOverlay');
+    const header = document.getElementById('panelHeader');
+    
+    // Set header color based on type
+    if (type === 'spending') {
+      header.className = 'px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600 text-white';
+    } else {
+      header.className = 'px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white';
+    }
+    
+    // Update panel content
+    document.getElementById('panelTitle').textContent = category;
+    document.getElementById('panelAmount').textContent = `${amount.toLocaleString()} ${currency}`;
+    
+    // Show loading state
+    document.getElementById('panelContent').innerHTML = `
+      <div class="flex justify-center items-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    `;
+    
+    // Show panel
+    panel.classList.remove('translate-x-full');
+    overlay.classList.remove('hidden');
+    
+    // Fetch transactions for this category
+    fetch(`/api/transactions/?category=${encodeURIComponent(category)}`)
+      .then(response => response.json())
+      .then(data => {
+        const transactions = data.transactions;
+        let html = `
+          <h4 class="font-semibold text-gray-900 mb-3">Recent Transactions</h4>
+          <div class="space-y-2">
+        `;
+        
+        if (transactions.length === 0) {
+          html += '<p class="text-gray-500 text-sm">No transactions found</p>';
+        } else {
+          transactions.slice(0, 20).forEach(t => {
+            html += `
+              <div class="border-b border-gray-200 pb-2">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900">${t.booking_text || 'N/A'}</p>
+                    <p class="text-xs text-gray-500">${t.date}</p>
+                  </div>
+                  <p class="text-sm font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${t.amount.toLocaleString()} ${t.currency}
+                  </p>
+                </div>
+              </div>
+            `;
+          });
+          
+          if (transactions.length > 20) {
+            html += `<p class="text-xs text-gray-500 mt-3">Showing 20 of ${transactions.length} transactions</p>`;
+          }
+        }
+        
+        html += '</div>';
+        document.getElementById('panelContent').innerHTML = html;
+      })
+      .catch(error => {
+        console.error('Error fetching transactions:', error);
+        document.getElementById('panelContent').innerHTML = `
+          <p class="text-red-600 text-sm">Error loading transactions</p>
+        `;
+      });
+  }
+
+      }
+  });
+
+  // Dynamic data loading function
+  function loadDashboardData(queryParams) {
+    console.log('loadDashboardData called with queryParams:', queryParams);
+    
+    const url = '/api/dashboard-data/' + queryParams;
+    console.log('Fetching URL:', url);
+    
+    fetch(url)
+      .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+          updateCharts(data);
+          updateCategoryLists(data);
+        } else {
+          console.error('Failed to load dashboard data:', data.error);
+          alert('Failed to load data. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error loading dashboard data:', error);
+        alert('Network error. Please check your connection and try again.');
+      });
+  }
+
+  // Update charts with new data
+  function updateCharts(data) {
+    // Update spending chart
+    if (window.spendingChart && data.top_spending) {
+      const spendingLabels = data.top_spending.map(item => item.category);
+      const spendingAmounts = data.top_spending.map(item => item.total);
+      const spendingColors = data.top_spending.map(item => item.color);
+      
+      window.spendingChart.data.labels = spendingLabels;
+      window.spendingChart.data.datasets[0].data = spendingAmounts;
+      window.spendingChart.data.datasets[0].backgroundColor = spendingColors;
+      window.spendingChart.update('active');
+    }
+    
+    // Update income chart
+    if (window.incomeChart && data.top_income) {
+      const incomeLabels = data.top_income.map(item => item.category);
+      const incomeAmounts = data.top_income.map(item => item.total);
+      const incomeColors = data.top_income.map(item => item.color);
+      
+      window.incomeChart.data.labels = incomeLabels;
+      window.incomeChart.data.datasets[0].data = incomeAmounts;
+      window.incomeChart.data.datasets[0].backgroundColor = incomeColors;
+      window.incomeChart.update('active');
+    }
+  }
+
+  // Update category lists in the UI
+  function updateCategoryLists(data) {
+    // Update spending categories list
+    if (data.top_spending) {
+      updateCategorySection('spending', data.top_spending);
+    }
+    
+    // Update income categories list
+    if (data.top_income) {
+      updateCategorySection('income', data.top_income);
+    }
+  }
+
+  function updateCategorySection(type, categories) {
+    const sectionClass = type === 'spending' ? '.bg-gradient-to-r.from-red-500' : '.bg-gradient-to-r.from-green-500';
+    const section = document.querySelector(sectionClass)?.closest('.bg-white.rounded-xl');
+    
+    if (!section) return;
+    
+    const contentDiv = section.querySelector('.p-6');
+    if (!contentDiv) return;
+    
+    if (categories.length === 0) {
+      // Show empty state
+      contentDiv.innerHTML = `
+        <div class="text-center py-12">
+          <i class="bi bi-inbox text-gray-300 text-5xl"></i>
+          <p class="text-gray-500 mt-4">No ${type} data available</p>
+          <p class="text-sm text-gray-400 mt-2">Upload your bank statements to get started</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Build the new HTML
+    const chartCanvasId = type === 'spending' ? 'spendingPieChart' : 'incomePieChart';
+    let html = `
+      <div class="flex justify-center mb-6">
+        <div class="w-80 h-80">
+          <canvas id="${chartCanvasId}"></canvas>
+        </div>
+      </div>
+      <div class="space-y-2">
+    `;
+    
+    categories.forEach(item => {
+      const currencyList = Object.keys(item.currencies).join('/');
+      html += `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div class="flex items-center space-x-3">
+            <div class="w-4 h-4 rounded-full" style="background-color: ${item.color}"></div>
+            <p class="font-medium text-gray-900 text-sm">${item.category}</p>
+          </div>
+          <p class="text-sm font-bold text-gray-700">
+            ${item.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            <span class="text-xs text-gray-500">${currencyList}</span>
+          </p>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    contentDiv.innerHTML = html;
+  }
+
+
 
 {% endblock %}

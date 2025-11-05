@@ -189,6 +189,8 @@ def settings_view(request):
 
 
 def expenses_vs_income(request):
+    import datetime
+
     from .models import Transaction, UploadedFile
 
     # Get filters from session instead of GET parameters
@@ -196,8 +198,6 @@ def expenses_vs_income(request):
     selected_currencies = request.session.get("selected_currencies", [])
 
     files = UploadedFile.objects.all().order_by("-uploaded_at")
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
 
     qs = Transaction.objects.all()
     if selected_file_ids:
@@ -210,8 +210,6 @@ def expenses_vs_income(request):
     )
 
     # Python-side date filtering for string dates
-    import datetime
-
     def parse_date(date_str):
         for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
             try:
@@ -220,20 +218,37 @@ def expenses_vs_income(request):
                 continue
         return None
 
-    if start_date:
-        start_dt = parse_date(start_date)
-        transactions = [
-            t
-            for t in transactions
-            if parse_date(t.date) and parse_date(t.date) >= start_dt
-        ]
-    if end_date:
-        end_dt = parse_date(end_date)
-        transactions = [
-            t
-            for t in transactions
-            if parse_date(t.date) and parse_date(t.date) <= end_dt
-        ]
+    # Apply time filter (takes precedence over manual date range)
+    time_filter = request.GET.get("time_filter", "all")
+    custom_start = request.GET.get("start_date") if time_filter == "custom" else None
+    custom_end = request.GET.get("end_date") if time_filter == "custom" else None
+
+    # Filter by time period
+    filtered_transactions = []
+    today = datetime.date.today()
+
+    for t in transactions:
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+
+        include = False
+
+        if time_filter == "all":
+            include = True
+        elif time_filter == "last_year":
+            one_year_ago = today - datetime.timedelta(days=365)
+            include = transaction_date >= one_year_ago
+        elif time_filter == "custom" and custom_start and custom_end:
+            start_dt = parse_date(custom_start)
+            end_dt = parse_date(custom_end)
+            if start_dt and end_dt:
+                include = start_dt <= transaction_date <= end_dt
+
+        if include:
+            filtered_transactions.append(t)
+
+    transactions = filtered_transactions
 
     # Filter by currencies if selected in session
     if selected_currencies:
@@ -287,8 +302,8 @@ def expenses_vs_income(request):
             "transactions": tx_data,
             "files": files,
             "selected_file_ids": selected_file_ids,
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date": custom_start if time_filter == "custom" else "",
+            "end_date": custom_end if time_filter == "custom" else "",
             "filtered_category_totals": filtered_category_totals,
             "all_currencies": all_currencies,
             "selected_currencies": selected_currencies,
@@ -297,6 +312,8 @@ def expenses_vs_income(request):
 
 
 def expenses_by_category(request):
+    import datetime
+
     from .models import Transaction, UploadedFile
 
     # Get filters from session
@@ -316,17 +333,57 @@ def expenses_by_category(request):
         {t.currency for t in Transaction.objects.all() if t.currency}
     )
 
-    # Filter by date range if provided
-    if start_date:
-        qs = qs.filter(date__gte=start_date)
-    if end_date:
-        qs = qs.filter(date__lte=end_date)
+    # Apply time filter (takes precedence over manual date range)
+    time_filter = request.GET.get("time_filter", "all")
+    custom_start = request.GET.get("start_date") if time_filter == "custom" else None
+    custom_end = request.GET.get("end_date") if time_filter == "custom" else None
+
+    # Helper function to parse date strings
+    def parse_date(date_str):
+        if not date_str:
+            return None
+        for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    # Get all transactions first
+    all_transactions = list(qs)
+
+    # Filter by time period
+    filtered_transactions = []
+    today = datetime.date.today()
+
+    for t in all_transactions:
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+
+        include = False
+
+        if time_filter == "all":
+            include = True
+        elif time_filter == "last_year":
+            one_year_ago = today - datetime.timedelta(days=365)
+            include = transaction_date >= one_year_ago
+        elif time_filter == "custom" and custom_start and custom_end:
+            start_dt = parse_date(custom_start)
+            end_dt = parse_date(custom_end)
+            if start_dt and end_dt:
+                include = start_dt <= transaction_date <= end_dt
+
+        if include:
+            filtered_transactions.append(t)
 
     # Filter by currencies if selected in session
     if selected_currencies:
-        qs = qs.filter(currency__in=selected_currencies)
+        filtered_transactions = [
+            t for t in filtered_transactions if t.currency in selected_currencies
+        ]
 
-    transactions_qs = qs
+    transactions_qs = filtered_transactions
     # Filter to only include expenses (negative amounts) and convert to positive
     transactions = [
         {
@@ -390,6 +447,8 @@ def expenses_by_category(request):
 
 
 def income_by_category(request):
+    import datetime
+
     from .models import Transaction, UploadedFile
 
     # Get filters from session
@@ -397,8 +456,6 @@ def income_by_category(request):
     selected_currencies = request.session.get("selected_currencies", [])
 
     files = UploadedFile.objects.all().order_by("-uploaded_at")
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
 
     qs = Transaction.objects.all()
     if selected_file_ids:
@@ -409,17 +466,57 @@ def income_by_category(request):
         {t.currency for t in Transaction.objects.all() if t.currency}
     )
 
-    # Filter by date range if provided
-    if start_date:
-        qs = qs.filter(date__gte=start_date)
-    if end_date:
-        qs = qs.filter(date__lte=end_date)
+    # Apply time filter (takes precedence over manual date range)
+    time_filter = request.GET.get("time_filter", "all")
+    custom_start = request.GET.get("start_date") if time_filter == "custom" else None
+    custom_end = request.GET.get("end_date") if time_filter == "custom" else None
+
+    # Helper function to parse date strings
+    def parse_date(date_str):
+        if not date_str:
+            return None
+        for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    # Get all transactions first
+    all_transactions = list(qs)
+
+    # Filter by time period
+    filtered_transactions = []
+    today = datetime.date.today()
+
+    for t in all_transactions:
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+
+        include = False
+
+        if time_filter == "all":
+            include = True
+        elif time_filter == "last_year":
+            one_year_ago = today - datetime.timedelta(days=365)
+            include = transaction_date >= one_year_ago
+        elif time_filter == "custom" and custom_start and custom_end:
+            start_dt = parse_date(custom_start)
+            end_dt = parse_date(custom_end)
+            if start_dt and end_dt:
+                include = start_dt <= transaction_date <= end_dt
+
+        if include:
+            filtered_transactions.append(t)
 
     # Filter by currencies if selected in session
     if selected_currencies:
-        qs = qs.filter(currency__in=selected_currencies)
+        filtered_transactions = [
+            t for t in filtered_transactions if t.currency in selected_currencies
+        ]
 
-    transactions_qs = qs
+    transactions_qs = filtered_transactions
     # Filter to only include income (positive amounts)
     transactions = [
         {
@@ -472,8 +569,8 @@ def income_by_category(request):
             "transactions": transactions,
             "files": files,
             "selected_file_ids": selected_file_ids,
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date": custom_start.strftime("%Y-%m-%d") if custom_start else "",
+            "end_date": custom_end.strftime("%Y-%m-%d") if custom_end else "",
             "filtered_category_totals": filtered_category_totals,
             "filtered_category_totals_json": json.dumps(filtered_category_totals),
             "all_currencies": all_currencies,
@@ -489,6 +586,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 def dashboard(request):
+    import datetime
     from collections import defaultdict
 
     from .models import Transaction, UploadedFile
@@ -506,6 +604,49 @@ def dashboard(request):
 
     all_transactions = list(qs)
 
+    # Apply time filter (from session storage via query params or default to all)
+    time_filter = request.GET.get("time_filter", "all")
+    custom_start = request.GET.get("start_date")
+    custom_end = request.GET.get("end_date")
+
+    # Helper function to parse date strings
+    def parse_date(date_str):
+        if not date_str:
+            return None
+        for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    # Filter by time period
+    filtered_transactions = []
+    today = datetime.date.today()
+
+    for t in all_transactions:
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+
+        include = False
+
+        if time_filter == "all":
+            include = True
+        elif time_filter == "last_year":
+            one_year_ago = today - datetime.timedelta(days=365)
+            include = transaction_date >= one_year_ago
+        elif time_filter == "custom" and custom_start and custom_end:
+            start_date = parse_date(custom_start)
+            end_date = parse_date(custom_end)
+            if start_date and end_date:
+                include = start_date <= transaction_date <= end_date
+
+        if include:
+            filtered_transactions.append(t)
+
+    all_transactions = filtered_transactions
+
     # Calculate top spending categories (negative amounts) with currency breakdown
     expense_by_category_currency = defaultdict(lambda: defaultdict(float))
     for t in all_transactions:
@@ -515,6 +656,20 @@ def dashboard(request):
 
     # Convert to list with total and currency breakdown
     top_spending = []
+    for category, currency_amounts in expense_by_category_currency.items():
+        total = sum(currency_amounts.values())
+        top_spending.append(
+            {
+                "category": category,
+                "total": total,
+                "currencies": dict(currency_amounts),
+            }
+        )
+
+    # Sort by total and get top 5, then assign colors in order
+    top_spending = sorted(top_spending, key=lambda x: x["total"], reverse=True)[:5]
+
+    # Assign colors AFTER sorting to ensure consistency
     spending_colors = [
         "#ef4444",
         "#f97316",
@@ -527,21 +682,8 @@ def dashboard(request):
         "#06b6d4",
         "#0ea5e9",
     ]
-    for idx, (category, currency_amounts) in enumerate(
-        expense_by_category_currency.items()
-    ):
-        total = sum(currency_amounts.values())
-        top_spending.append(
-            {
-                "category": category,
-                "total": total,
-                "currencies": dict(currency_amounts),
-                "color": spending_colors[idx % len(spending_colors)],
-            }
-        )
-
-    # Sort by total and get top 5
-    top_spending = sorted(top_spending, key=lambda x: x["total"], reverse=True)[:5]
+    for idx, item in enumerate(top_spending):
+        item["color"] = spending_colors[idx % len(spending_colors)]
 
     # Calculate top income categories (positive amounts) with currency breakdown
     income_by_category_currency = defaultdict(lambda: defaultdict(float))
@@ -552,6 +694,20 @@ def dashboard(request):
 
     # Convert to list with total and currency breakdown
     top_income = []
+    for category, currency_amounts in income_by_category_currency.items():
+        total = sum(currency_amounts.values())
+        top_income.append(
+            {
+                "category": category,
+                "total": total,
+                "currencies": dict(currency_amounts),
+            }
+        )
+
+    # Sort by total and get top 5, then assign colors in order
+    top_income = sorted(top_income, key=lambda x: x["total"], reverse=True)[:5]
+
+    # Assign colors AFTER sorting to ensure consistency
     income_colors = [
         "#22c55e",
         "#10b981",
@@ -564,20 +720,10 @@ def dashboard(request):
         "#a855f7",
         "#d946ef",
     ]
-    for idx, (category, currency_amounts) in enumerate(
-        income_by_category_currency.items()
-    ):
-        total = sum(currency_amounts.values())
-        top_income.append(
-            {
-                "category": category,
-                "total": total,
-                "currencies": dict(currency_amounts),
-                "color": income_colors[idx % len(income_colors)],
-            }
-        )
-
-    # Sort by total and get top 5
+    for idx, item in enumerate(top_income):
+        item["color"] = income_colors[
+            idx % len(income_colors)
+        ]  # Sort by total and get top 5
     top_income = sorted(top_income, key=lambda x: x["total"], reverse=True)[:5]
 
     # Prepare recent transactions for display (last 50)
@@ -599,6 +745,8 @@ def dashboard(request):
             "transactions": transactions,
             "top_spending": top_spending,
             "top_income": top_income,
+            "top_spending_json": json.dumps(top_spending),
+            "top_income_json": json.dumps(top_income),
         },
     )
 
@@ -728,3 +876,374 @@ def api_create_category(request):
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+def expenses_by_category_data_ajax(request):
+    """AJAX endpoint for expenses by category time filtering"""
+    import datetime
+    from collections import defaultdict
+
+    from .models import Transaction, UploadedFile
+
+    try:
+        # Get time filter parameters
+        time_filter = request.GET.get("time_filter", "all")
+        custom_start = None
+        custom_end = None
+
+        # Parse date helper function
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+                try:
+                    return datetime.datetime.strptime(date_str, fmt).date()
+                except Exception:
+                    continue
+            return None
+
+        # Handle time filtering
+        if time_filter == "custom":
+            start_date_str = request.GET.get("start_date")
+            end_date_str = request.GET.get("end_date")
+            custom_start = parse_date(start_date_str)
+            custom_end = parse_date(end_date_str)
+        elif time_filter == "last_year":
+            today = datetime.date.today()
+            custom_start = today - datetime.timedelta(days=365)
+            custom_end = today
+        # 'all' time means no filtering
+
+        # Get all transactions
+        transactions = list(Transaction.objects.all().values())
+
+        # Apply time filtering
+        if custom_start and custom_end:
+            filtered_transactions = []
+            for t in transactions:
+                t_date = parse_date(t["date"])
+                if t_date and custom_start <= t_date <= custom_end:
+                    filtered_transactions.append(t)
+            transactions = filtered_transactions
+
+        # Filter for expenses (negative amounts)
+        expense_transactions = [t for t in transactions if t["amount"] < 0]
+
+        # Group by category
+        category_totals = defaultdict(float)
+        for t in expense_transactions:
+            if t["category"] and t["category"] != "Uncounted":
+                category_totals[t["category"]] += abs(t["amount"])
+
+        # Sort and get top categories
+        sorted_categories = sorted(
+            category_totals.items(), key=lambda x: x[1], reverse=True
+        )
+
+        # Prepare chart data
+        labels = [cat[0] for cat in sorted_categories]
+        amounts = [cat[1] for cat in sorted_categories]
+
+        return JsonResponse(
+            {"success": True, "chart_data": {"labels": labels, "amounts": amounts}}
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
+def expenses_vs_income_data_ajax(request):
+    """AJAX endpoint for expenses vs income time filtering"""
+    import datetime
+    from collections import defaultdict
+
+    from .models import Transaction, UploadedFile
+
+    try:
+        # Get time filter parameters
+        time_filter = request.GET.get("time_filter", "all")
+        custom_start = None
+        custom_end = None
+
+        # Parse date helper function
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+                try:
+                    return datetime.datetime.strptime(date_str, fmt).date()
+                except Exception:
+                    continue
+            return None
+
+        # Handle time filtering
+        if time_filter == "custom":
+            start_date_str = request.GET.get("start_date")
+            end_date_str = request.GET.get("end_date")
+            custom_start = parse_date(start_date_str)
+            custom_end = parse_date(end_date_str)
+        elif time_filter == "last_year":
+            today = datetime.date.today()
+            custom_start = today - datetime.timedelta(days=365)
+            custom_end = today
+
+        # Get all transactions
+        transactions = list(Transaction.objects.all().values())
+
+        # Apply time filtering
+        if custom_start and custom_end:
+            filtered_transactions = []
+            for t in transactions:
+                t_date = parse_date(t["date"])
+                if t_date and custom_start <= t_date <= custom_end:
+                    filtered_transactions.append(t)
+            transactions = filtered_transactions
+
+        # Simple monthly aggregation for now
+        monthly_data = defaultdict(lambda: {"expenses": 0, "income": 0})
+
+        for t in transactions:
+            t_date = parse_date(t["date"])
+            if t_date:
+                month_key = f"{t_date.year}-{t_date.month:02d}"
+                if t["amount"] < 0:
+                    monthly_data[month_key]["expenses"] += abs(t["amount"])
+                else:
+                    monthly_data[month_key]["income"] += t["amount"]
+
+        # Sort by month and prepare chart data
+        sorted_months = sorted(monthly_data.keys())
+        labels = sorted_months
+        expenses = [monthly_data[month]["expenses"] for month in sorted_months]
+        income = [monthly_data[month]["income"] for month in sorted_months]
+
+        return JsonResponse(
+            {
+                "success": True,
+                "chart_data": {
+                    "labels": labels,
+                    "expenses": expenses,
+                    "income": income,
+                },
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
+def income_by_category_data_ajax(request):
+    """AJAX endpoint for income by category time filtering"""
+    import datetime
+    from collections import defaultdict
+
+    from .models import Transaction, UploadedFile
+
+    try:
+        # Get time filter parameters
+        time_filter = request.GET.get("time_filter", "all")
+        custom_start = None
+        custom_end = None
+
+        # Parse date helper function
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+                try:
+                    return datetime.datetime.strptime(date_str, fmt).date()
+                except Exception:
+                    continue
+            return None
+
+        # Handle time filtering
+        if time_filter == "custom":
+            start_date_str = request.GET.get("start_date")
+            end_date_str = request.GET.get("end_date")
+            custom_start = parse_date(start_date_str)
+            custom_end = parse_date(end_date_str)
+        elif time_filter == "last_year":
+            today = datetime.date.today()
+            custom_start = today - datetime.timedelta(days=365)
+            custom_end = today
+
+        # Get all transactions
+        transactions = list(Transaction.objects.all().values())
+
+        # Apply time filtering
+        if custom_start and custom_end:
+            filtered_transactions = []
+            for t in transactions:
+                t_date = parse_date(t["date"])
+                if t_date and custom_start <= t_date <= custom_end:
+                    filtered_transactions.append(t)
+            transactions = filtered_transactions
+
+        # Filter for income (positive amounts)
+        income_transactions = [t for t in transactions if t["amount"] > 0]
+
+        # Group by category
+        category_totals = defaultdict(float)
+        for t in income_transactions:
+            if t["category"] and t["category"] != "Uncounted":
+                category_totals[t["category"]] += t["amount"]
+
+        # Sort and get top categories
+        sorted_categories = sorted(
+            category_totals.items(), key=lambda x: x[1], reverse=True
+        )
+
+        # Prepare chart data
+        labels = [cat[0] for cat in sorted_categories]
+        amounts = [cat[1] for cat in sorted_categories]
+
+        return JsonResponse(
+            {"success": True, "chart_data": {"labels": labels, "amounts": amounts}}
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
+def dashboard_data_ajax(request):
+    """AJAX endpoint for dynamic time filtering on dashboard"""
+    import datetime
+    from collections import defaultdict
+
+    from .models import Transaction, UploadedFile
+
+    # Get filters from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
+    # Filter transactions based on session settings
+    qs = Transaction.objects.all()
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+    if selected_currencies:
+        qs = qs.filter(currency__in=selected_currencies)
+
+    all_transactions = list(qs)
+
+    # Apply time filter
+    time_filter = request.GET.get("time_filter", "all")
+    custom_start = request.GET.get("start_date")
+    custom_end = request.GET.get("end_date")
+
+    # Helper function to parse date strings
+    def parse_date(date_str):
+        if not date_str:
+            return None
+        for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    # Filter by time period
+    filtered_transactions = []
+    today = datetime.date.today()
+
+    for t in all_transactions:
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+
+        include = False
+
+        if time_filter == "all":
+            include = True
+        elif time_filter == "last_year":
+            one_year_ago = today - datetime.timedelta(days=365)
+            include = transaction_date >= one_year_ago
+        elif time_filter == "custom" and custom_start and custom_end:
+            start_date = parse_date(custom_start)
+            end_date = parse_date(custom_end)
+            if start_date and end_date:
+                include = start_date <= transaction_date <= end_date
+
+        if include:
+            filtered_transactions.append(t)
+
+    all_transactions = filtered_transactions
+
+    # Calculate top spending categories (negative amounts) with currency breakdown
+    expense_by_category_currency = defaultdict(lambda: defaultdict(float))
+    for t in all_transactions:
+        if t.amount and t.amount < 0 and t.category and t.category != "Uncounted":
+            currency = t.currency if t.currency else "Unknown"
+            expense_by_category_currency[t.category][currency] += abs(t.amount)
+
+    # Convert to list with total and currency breakdown for spending
+    top_spending = []
+    colors = [
+        "#FF6B6B",
+        "#4ECDC4",
+        "#45B7D1",
+        "#96CEB4",
+        "#FECA57",
+        "#FF9FF3",
+        "#54A0FF",
+        "#5F27CD",
+        "#00D2D3",
+        "#FF9F43",
+        "#10AC84",
+        "#EE5A24",
+        "#0984E3",
+        "#A29BFE",
+        "#FD79A8",
+    ]
+
+    for i, (category, currencies) in enumerate(expense_by_category_currency.items()):
+        total = sum(currencies.values())
+        color = colors[i % len(colors)]
+        top_spending.append(
+            {
+                "category": category,
+                "total": total,
+                "color": color,
+                "currencies": dict(currencies),
+            }
+        )
+
+    # Sort by total descending and take top 10
+    top_spending.sort(key=lambda x: x["total"], reverse=True)
+    top_spending = top_spending[:10]
+
+    # Calculate top income categories (positive amounts) with currency breakdown
+    income_by_category_currency = defaultdict(lambda: defaultdict(float))
+    for t in all_transactions:
+        if t.amount and t.amount > 0 and t.category and t.category != "Uncounted":
+            currency = t.currency if t.currency else "Unknown"
+            income_by_category_currency[t.category][currency] += t.amount
+
+    # Convert to list with total and currency breakdown for income
+    top_income = []
+
+    for i, (category, currencies) in enumerate(income_by_category_currency.items()):
+        total = sum(currencies.values())
+        color = colors[i % len(colors)]
+        top_income.append(
+            {
+                "category": category,
+                "total": total,
+                "color": color,
+                "currencies": dict(currencies),
+            }
+        )
+
+    # Sort by total descending and take top 10
+    top_income.sort(key=lambda x: x["total"], reverse=True)
+    top_income = top_income[:10]
+
+    return JsonResponse(
+        {
+            "success": True,
+            "top_spending": top_spending,
+            "top_income": top_income,
+            "time_filter": time_filter,
+            "custom_start": custom_start,
+            "custom_end": custom_end,
+        }
+    )

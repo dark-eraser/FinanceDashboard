@@ -21,4 +21,20 @@ urlpatterns = [
     path(
         "api/categories/create/", views.api_create_category, name="api_create_category"
     ),
+    path("api/dashboard-data/", views.dashboard_data_ajax, name="dashboard_data_ajax"),
+    path(
+        "api/expenses-by-category-data/",
+        views.expenses_by_category_data_ajax,
+        name="expenses_by_category_data_ajax",
+    ),
+    path(
+        "api/expenses-vs-income-data/",
+        views.expenses_vs_income_data_ajax,
+        name="expenses_vs_income_data_ajax",
+    ),
+    path(
+        "api/income-by-category-data/",
+        views.income_by_category_data_ajax,
+        name="income_by_category_data_ajax",
+    ),
 ]
