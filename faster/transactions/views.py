@@ -110,6 +110,9 @@ def settings_view(request):
 
                     # Extract category
                     category = row.get("Category") or ""
+                    # Handle pandas NaN values
+                    if pd.isna(category):
+                        category = ""
 
                     # Extract amount
                     amount = None
@@ -141,8 +144,47 @@ def settings_view(request):
                         )
                     )
 
-                Transaction.objects.bulk_create(transactions_to_create)
-                success = f"Successfully uploaded {len(transactions_to_create)} transactions from {csv_file.name}"
+                # Create transactions
+                created_transactions = Transaction.objects.bulk_create(
+                    transactions_to_create
+                )
+
+                # Apply semantic categorization to newly created transactions
+                try:
+                    from .categorization_service import TransactionCategorizationService
+
+                    categorization_service = TransactionCategorizationService()
+
+                    # Get the actual created transactions (bulk_create doesn't return IDs in older Django versions)
+                    new_transactions = Transaction.objects.filter(
+                        uploaded_file=uploaded_file
+                    )
+
+                    # Categorize transactions that don't already have categories
+                    uncategorized = [
+                        t
+                        for t in new_transactions
+                        if not t.category or t.category in ["Uncategorized", "nan"]
+                    ]
+
+                    if uncategorized:
+                        categorization_stats = (
+                            categorization_service.categorize_transactions_bulk(
+                                uncategorized
+                            )
+                        )
+                        success = (
+                            f"Successfully uploaded {len(transactions_to_create)} transactions from {csv_file.name}. "
+                            f"Automatically categorized {categorization_stats['categorized']} transactions using semantic analysis "
+                            f"({categorization_stats['high_confidence']} high confidence, "
+                            f"{categorization_stats['medium_confidence']} medium confidence)."
+                        )
+                    else:
+                        success = f"Successfully uploaded {len(transactions_to_create)} transactions from {csv_file.name}"
+
+                except Exception as e:
+                    # If categorization fails, still show success for upload
+                    success = f"Successfully uploaded {len(transactions_to_create)} transactions from {csv_file.name}. Note: Automatic categorization failed: {str(e)}"
 
                 # Refresh files list
                 files = UploadedFile.objects.all().order_by("-uploaded_at")
@@ -814,6 +856,7 @@ def api_get_transactions(request):
     )
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def api_update_category(request, transaction_id):
     """API endpoint to update a transaction's category"""
@@ -825,11 +868,33 @@ def api_update_category(request, transaction_id):
         data = json.loads(request.body)
         new_category = data.get("category", "")
 
-        transaction = Transaction.objects.get(id=transaction_id)
-        transaction.category = new_category
-        transaction.save()
+        # Use categorization service to record manual categorization
+        try:
+            from .categorization_service import TransactionCategorizationService
 
-        return JsonResponse({"success": True, "category": new_category})
+            categorization_service = TransactionCategorizationService()
+
+            success = categorization_service.record_manual_categorization(
+                transaction_id, new_category
+            )
+
+            if success:
+                return JsonResponse({"success": True, "category": new_category})
+            else:
+                return JsonResponse(
+                    {"success": False, "error": "Transaction not found"}, status=404
+                )
+
+        except Exception:
+            # Fallback to original method if categorization service fails
+            transaction = Transaction.objects.get(id=transaction_id)
+            transaction.category = new_category
+            transaction.is_manually_categorized = True
+            transaction.category_confidence = 1.0
+            transaction.save()
+
+            return JsonResponse({"success": True, "category": new_category})
+
     except Transaction.DoesNotExist:
         return JsonResponse(
             {"success": False, "error": "Transaction not found"}, status=404
@@ -1247,3 +1312,84 @@ def dashboard_data_ajax(request):
             "custom_end": custom_end,
         }
     )
+
+
+# Semantic Categorization API Endpoints
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_categorization_stats(request):
+    """API endpoint to get categorization statistics"""
+    try:
+        from .categorization_service import TransactionCategorizationService
+
+        categorization_service = TransactionCategorizationService()
+
+        stats = categorization_service.get_categorization_stats()
+        return JsonResponse({"success": True, "stats": stats})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_recategorize_uncategorized(request):
+    """API endpoint to re-run categorization on uncategorized transactions"""
+    try:
+        from .categorization_service import TransactionCategorizationService
+
+        categorization_service = TransactionCategorizationService()
+
+        stats = categorization_service.recategorize_uncategorized_transactions()
+        return JsonResponse({"success": True, "categorization_stats": stats})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_low_confidence_transactions(request):
+    """API endpoint to get transactions with low confidence predictions for review"""
+    try:
+        from .categorization_service import TransactionCategorizationService
+
+        categorization_service = TransactionCategorizationService()
+
+        confidence_threshold = float(request.GET.get("threshold", 0.6))
+        transactions = categorization_service.improve_low_confidence_predictions(
+            confidence_threshold
+        )
+
+        return JsonResponse({"success": True, "transactions": transactions})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_get_category_suggestions(request):
+    """API endpoint to get category suggestions for a merchant"""
+    import json
+
+    try:
+        from .categorization_service import TransactionCategorizationService
+
+        categorization_service = TransactionCategorizationService()
+
+        data = json.loads(request.body)
+        merchant_text = data.get("merchant", "").strip()
+
+        if not merchant_text:
+            return JsonResponse(
+                {"success": False, "error": "Merchant text is required"}, status=400
+            )
+
+        suggestions = categorization_service.get_suggestions_for_merchant(merchant_text)
+        return JsonResponse({"success": True, "suggestions": suggestions})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

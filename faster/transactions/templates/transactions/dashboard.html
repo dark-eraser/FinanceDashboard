@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% csrf_token %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -193,6 +194,101 @@
           <i class="bi bi-graph-up"></i>
           <span>View Analytics</span>
         </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Semantic Categorization Statistics -->
+  <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300 mb-8" id="categorization-stats-section">
+    <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4">
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-robot mr-2"></i>
+        AI Categorization Statistics
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Categorization Rate -->
+        <div class="text-center p-4 bg-blue-50 rounded-lg">
+          <div class="text-2xl font-bold text-blue-600" id="categorization-rate">-</div>
+          <div class="text-sm text-gray-600">Categorization Rate</div>
+        </div>
+        
+        <!-- High Confidence -->
+        <div class="text-center p-4 bg-green-50 rounded-lg">
+          <div class="text-2xl font-bold text-green-600" id="high-confidence-count">-</div>
+          <div class="text-sm text-gray-600">High Confidence</div>
+        </div>
+        
+        <!-- Medium Confidence -->
+        <div class="text-center p-4 bg-yellow-50 rounded-lg">
+          <div class="text-2xl font-bold text-yellow-600" id="medium-confidence-count">-</div>
+          <div class="text-sm text-gray-600">Medium Confidence</div>
+        </div>
+        
+        <!-- Manual Corrections -->
+        <div class="text-center p-4 bg-purple-50 rounded-lg">
+          <div class="text-2xl font-bold text-purple-600" id="manual-corrections-count">-</div>
+          <div class="text-sm text-gray-600">Manual Corrections</div>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-3 justify-center">
+        <button 
+          id="recategorize-btn"
+          class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+        >
+          <i class="bi bi-arrow-clockwise"></i>
+          <span>Re-categorize Uncategorized</span>
+        </button>
+        
+        <button 
+          id="review-low-confidence-btn"
+          class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+        >
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>Review Low Confidence</span>
+        </button>
+        
+        <button 
+          id="refresh-stats-btn"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+        >
+          <i class="bi bi-arrow-clockwise"></i>
+          <span>Refresh Stats</span>
+        </button>
+      </div>
+      
+      <!-- Progress Bar for Operations -->
+      <div id="categorization-progress" class="mt-4 hidden">
+        <div class="bg-gray-200 rounded-full h-2">
+          <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p class="text-sm text-gray-600 mt-1 text-center">Processing...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Low Confidence Transactions Review -->
+  <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300 mb-8" id="low-confidence-section" style="display: none;">
+    <div class="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-exclamation-triangle mr-2"></i>
+        Low Confidence Predictions - Manual Review Required
+      </h2>
+    </div>
+    <div class="p-6">
+      <div id="low-confidence-transactions" class="space-y-4">
+        <!-- Will be populated by JavaScript -->
+      </div>
+      <div class="text-center mt-4">
+        <button 
+          id="close-review-btn"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+        >
+          Close Review
+        </button>
       </div>
     </div>
   </div>
@@ -632,9 +728,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Save active filter to session
   sessionStorage.setItem('timeFilter', activeFilter);
 });
-</script>
-      }
-</script>
 
   function closeCategoryPanel() {
     document.getElementById('categoryDetailPanel').classList.add('translate-x-full');
@@ -712,9 +805,6 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
       });
   }
-
-      }
-  });
 
   // Dynamic data loading function
   function loadDashboardData(queryParams) {
@@ -836,6 +926,227 @@ document.addEventListener('DOMContentLoaded', function() {
     contentDiv.innerHTML = html;
   }
 
+  // Semantic Categorization Functions
+  function loadCategorizationStats() {
+    console.log('loadCategorizationStats called');
+    fetch('/api/categorization/stats/')
+      .then(response => {
+        console.log('API response received:', response);
+        return response.json();
+      })
+      .then(data => {
+        console.log('API data:', data);
+        if (data.success) {
+          updateCategorizationStatsUI(data.stats);
+          document.getElementById('categorization-stats-section').style.display = 'block';
+        }
+      })
+      .catch(error => console.error('Error loading categorization stats:', error));
+  }
 
+  function updateCategorizationStatsUI(stats) {
+    document.getElementById('categorization-rate').textContent = 
+      stats.categorization_rate.toFixed(1) + '%';
+    document.getElementById('high-confidence-count').textContent = stats.high_confidence;
+    document.getElementById('medium-confidence-count').textContent = stats.medium_confidence;
+    document.getElementById('manual-corrections-count').textContent = stats.manually_categorized;
+  }
+
+  function recategorizeUncategorized() {
+    const progressDiv = document.getElementById('categorization-progress');
+    const btn = document.getElementById('recategorize-btn');
+    
+    // Show progress
+    progressDiv.classList.remove('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise animate-spin"></i><span>Processing...</span>';
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch('/api/categorization/recategorize/', { 
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json',
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const stats = data.categorization_stats;
+          alert(`Successfully categorized ${stats.categorized} transactions!\n` +
+                `High confidence: ${stats.high_confidence}\n` +
+                `Medium confidence: ${stats.medium_confidence}\n` +
+                `Low confidence: ${stats.low_confidence}`);
+          
+          // Refresh stats and dashboard data
+          loadCategorizationStats();
+          loadDashboardData(currentTimeFilter, customStartDate, customEndDate);
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error recategorizing:', error);
+        alert('Error occurred during recategorization');
+      })
+      .finally(() => {
+        // Hide progress
+        progressDiv.classList.add('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i><span>Re-categorize Uncategorized</span>';
+      });
+  }
+
+  function reviewLowConfidence() {
+    const section = document.getElementById('low-confidence-section');
+    const container = document.getElementById('low-confidence-transactions');
+    
+    // Show loading
+    container.innerHTML = '<div class="text-center py-4"><i class="bi bi-arrow-clockwise animate-spin text-2xl text-gray-400"></i></div>';
+    section.style.display = 'block';
+    
+    fetch('/api/categorization/low-confidence/')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.transactions.length > 0) {
+          displayLowConfidenceTransactions(data.transactions);
+        } else if (data.transactions.length === 0) {
+          container.innerHTML = '<div class="text-center py-8 text-gray-500">No low confidence predictions found. Great job!</div>';
+        } else {
+          container.innerHTML = '<div class="text-center py-4 text-red-500">Error: ' + data.error + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Error loading low confidence transactions:', error);
+        container.innerHTML = '<div class="text-center py-4 text-red-500">Error loading transactions</div>';
+      });
+  }
+
+  function displayLowConfidenceTransactions(transactions) {
+    const container = document.getElementById('low-confidence-transactions');
+    
+    let html = '';
+    transactions.forEach(transaction => {
+      const confidenceColor = transaction.confidence > 0.5 ? 'yellow' : 'red';
+      const suggestions = transaction.suggestions.map(s => 
+        `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1 cursor-pointer" 
+               onclick="applySuggestion(${transaction.transaction_id}, '${s.category}')">${s.category} (${(s.confidence * 100).toFixed(0)}%)</span>`
+      ).join('');
+      
+      html += `
+        <div class="border rounded-lg p-4 bg-gray-50">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-900">${transaction.booking_text}</p>
+              <p class="text-sm text-gray-600">${transaction.date} • ${transaction.amount} ${transaction.currency || ''}</p>
+            </div>
+            <div class="text-right">
+              <span class="inline-block bg-${confidenceColor}-100 text-${confidenceColor}-800 px-2 py-1 rounded text-xs">
+                ${(transaction.confidence * 100).toFixed(0)}% confidence
+              </span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <p class="text-sm text-gray-700 mb-1">Current: <span class="font-medium">${transaction.current_category}</span></p>
+            <p class="text-sm text-gray-700 mb-2">Suggestions:</p>
+            <div>${suggestions}</div>
+          </div>
+          <div class="flex space-x-2">
+            <input type="text" 
+                   id="custom-category-${transaction.transaction_id}" 
+                   placeholder="Or enter custom category"
+                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <button onclick="applyCustomCategory(${transaction.transaction_id})"
+                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+              Apply
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  function applySuggestion(transactionId, category) {
+    updateTransactionCategory(transactionId, category);
+  }
+
+  function applyCustomCategory(transactionId) {
+    const input = document.getElementById(`custom-category-${transactionId}`);
+    const category = input.value.trim();
+    
+    if (category) {
+      updateTransactionCategory(transactionId, category);
+    }
+  }
+
+  function updateTransactionCategory(transactionId, category) {
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/api/transactions/${transactionId}/update-category/`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ category: category })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Remove the transaction from the review list
+        const transactionElement = document.querySelector(`[onclick*="${transactionId}"]`)?.closest('.border');
+        if (transactionElement) {
+          transactionElement.style.opacity = '0.5';
+          transactionElement.innerHTML = '<div class="p-4 text-center text-green-600"><i class="bi bi-check-circle"></i> Updated successfully</div>';
+          
+          setTimeout(() => {
+            transactionElement.remove();
+            
+            // Check if no more transactions to review
+            const remainingTransactions = document.querySelectorAll('#low-confidence-transactions .border');
+            if (remainingTransactions.length === 1) { // This one will be removed
+              document.getElementById('low-confidence-transactions').innerHTML = 
+                '<div class="text-center py-8 text-green-500"><i class="bi bi-check-circle text-2xl"></i><p class="mt-2">All transactions reviewed!</p></div>';
+            }
+          }, 1000);
+        }
+        
+        // Refresh stats
+        loadCategorizationStats();
+        loadDashboardData(currentTimeFilter, customStartDate, customEndDate);
+      } else {
+        alert('Error updating category: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error updating category:', error);
+      alert('Error updating category');
+    });
+  }
+
+  // Event listeners for categorization features
+  document.getElementById('recategorize-btn').addEventListener('click', recategorizeUncategorized);
+  document.getElementById('review-low-confidence-btn').addEventListener('click', reviewLowConfidence);
+  document.getElementById('refresh-stats-btn').addEventListener('click', loadCategorizationStats);
+  document.getElementById('close-review-btn').addEventListener('click', function() {
+    document.getElementById('low-confidence-section').style.display = 'none';
+  });
+
+  // Load categorization stats on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Loading categorization stats...');
+    // Delay loading stats to let other components load first
+    setTimeout(function() {
+      console.log('Calling loadCategorizationStats...');
+      loadCategorizationStats();
+    }, 1000);
+  });
+
+</script>
 
 {% endblock %}

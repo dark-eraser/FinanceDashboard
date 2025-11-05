@@ -19,5 +19,20 @@ class Transaction(models.Model):
     amount = models.FloatField(blank=True, null=True)
     currency = models.CharField(max_length=10, blank=True, default="")
 
+    # Semantic categorization fields
+    category_confidence = models.FloatField(
+        blank=True,
+        null=True,
+        help_text="Confidence score for category prediction (0.0-1.0)",
+    )
+    is_manually_categorized = models.BooleanField(
+        default=False, help_text="True if category was manually set by user"
+    )
+    predicted_category = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Original predicted category before manual correction",
+    )
+
     def __str__(self):
         return f"{self.date} | {self.booking_text} | {self.category} | {self.amount} {self.currency}"

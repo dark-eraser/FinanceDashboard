@@ -37,4 +37,25 @@ urlpatterns = [
         views.income_by_category_data_ajax,
         name="income_by_category_data_ajax",
     ),
+    # Semantic categorization endpoints
+    path(
+        "api/categorization/stats/",
+        views.api_categorization_stats,
+        name="api_categorization_stats",
+    ),
+    path(
+        "api/categorization/recategorize/",
+        views.api_recategorize_uncategorized,
+        name="api_recategorize_uncategorized",
+    ),
+    path(
+        "api/categorization/low-confidence/",
+        views.api_low_confidence_transactions,
+        name="api_low_confidence_transactions",
+    ),
+    path(
+        "api/categorization/suggestions/",
+        views.api_get_category_suggestions,
+        name="api_get_category_suggestions",
+    ),
 ]
