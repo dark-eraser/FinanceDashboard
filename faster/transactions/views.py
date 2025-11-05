@@ -217,7 +217,7 @@ def settings_view(request):
 
     return render(
         request,
-        "dashboard/settings.html",
+        "transactions/settings.html",
         {
             "files": files,
             "all_currencies": all_currencies,
@@ -798,6 +798,7 @@ import json
 
 def delete_file(request, file_id):
     """Delete an uploaded file and all its associated transactions"""
+    from django.http import JsonResponse
     from django.shortcuts import redirect
 
     from .models import UploadedFile
@@ -806,10 +807,19 @@ def delete_file(request, file_id):
         try:
             uploaded_file = UploadedFile.objects.get(id=file_id)
             uploaded_file.delete()  # This will cascade delete all related transactions
-        except UploadedFile.DoesNotExist:
-            pass
 
-    # Redirect back to the referrer or dashboard
+            # If it's an AJAX request, return JSON
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"success": True, "message": "File deleted successfully"}
+                )
+        except UploadedFile.DoesNotExist:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"success": False, "error": "File not found"}, status=404
+                )
+
+    # Redirect back to the referrer or dashboard for non-AJAX requests
     return redirect(request.META.get("HTTP_REFERER", "/"))
 
 
@@ -1343,7 +1353,17 @@ def api_recategorize_uncategorized(request):
         categorization_service = TransactionCategorizationService()
 
         stats = categorization_service.recategorize_uncategorized_transactions()
-        return JsonResponse({"success": True, "categorization_stats": stats})
+        # Return stats directly with the expected keys
+        return JsonResponse(
+            {
+                "success": True,
+                "total": stats.get("total", 0),
+                "categorized": stats.get("categorized", 0),
+                "high_confidence": stats.get("high_confidence", 0),
+                "medium_confidence": stats.get("medium_confidence", 0),
+                "low_confidence": stats.get("low_confidence", 0),
+            }
+        )
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)

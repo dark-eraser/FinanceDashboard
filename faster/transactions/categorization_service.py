@@ -134,6 +134,7 @@ class TransactionCategorizationService:
     ) -> bool:
         """
         Record when a user manually updates a transaction's category.
+        Also auto-applies the category to all transactions with the same merchant (booking_text).
 
         Args:
             transaction_id: ID of the transaction being updated
@@ -144,6 +145,7 @@ class TransactionCategorizationService:
         """
         try:
             transaction = Transaction.objects.get(id=transaction_id)
+            merchant_text = transaction.booking_text
 
             # Record correction if we had a previous prediction
             if (
@@ -157,13 +159,33 @@ class TransactionCategorizationService:
                     confidence=transaction.category_confidence,
                 )
 
-            # Update transaction
+            # Update this transaction
             transaction.category = new_category
             transaction.is_manually_categorized = True
             transaction.category_confidence = (
                 1.0  # Manual categorization has full confidence
             )
             transaction.save()
+
+            # Auto-apply to all transactions with the same merchant (booking_text)
+            # but only if they aren't already manually categorized
+            if merchant_text:
+                same_merchant_transactions = Transaction.objects.filter(
+                    booking_text=merchant_text, is_manually_categorized=False
+                ).exclude(id=transaction_id)
+
+                count = 0
+                for t in same_merchant_transactions:
+                    t.category = new_category
+                    t.is_manually_categorized = True
+                    t.category_confidence = 1.0
+                    t.save()
+                    count += 1
+
+                if count > 0:
+                    print(
+                        f"Auto-applied category '{new_category}' to {count} other transactions with merchant '{merchant_text}'"
+                    )
 
             return True
         except Transaction.DoesNotExist:
@@ -252,36 +274,37 @@ class TransactionCategorizationService:
     ) -> List[Dict]:
         """
         Get transactions with low confidence predictions for manual review.
+        Returns ALL low-confidence transactions sorted by confidence (lowest first).
 
         Args:
             confidence_threshold: Threshold below which predictions are considered low confidence
 
         Returns:
-            List of transaction data with suggestions for manual review
+            List of transaction data sorted by confidence (lowest first)
         """
         low_confidence_transactions = (
             Transaction.objects.filter(
                 category_confidence__lt=confidence_threshold,
-                category_confidence__gt=0.0,
+                category_confidence__gte=0.0,
                 is_manually_categorized=False,
             )
             .exclude(category__in=["Uncategorized", "nan", ""])
-            .order_by("category_confidence")[:20]
-        )  # Limit to 20 for performance
+            .order_by("category_confidence")
+        )
 
         results = []
         for transaction in low_confidence_transactions:
-            suggestions = self.get_suggestions_for_merchant(transaction.booking_text)
-
             results.append(
                 {
                     "transaction_id": transaction.id,
                     "booking_text": transaction.booking_text,
-                    "current_category": transaction.category,
-                    "confidence": transaction.category_confidence,
+                    "category": transaction.category,
+                    "confidence": transaction.category_confidence or 0.0,
                     "amount": transaction.amount,
                     "date": transaction.date,
-                    "suggestions": suggestions,
+                    "currency": transaction.currency
+                    if hasattr(transaction, "currency")
+                    else "CHF",
                 }
             )
 

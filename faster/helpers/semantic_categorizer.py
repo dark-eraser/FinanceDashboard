@@ -24,7 +24,23 @@ class SemanticCategorizer:
     """
 
     # Keyword rules for common merchants
+    # NOTE: Order matters! More specific rules should come first
     KEYWORD_RULES = {
+        "Uncounted": [
+            # Currency exchanges
+            r"\bexchanged to (eur|chf|usd|huf|cad)\b",
+            # Top-ups (any pattern with asterisks)
+            r"\btop-up by \*",
+            # Balance migration
+            r"\bbalance migration\b",
+            # Personal payments (Payment from NAME or Transfer to/from NAME)
+            r"(payment from|transfer (to|from))\s+[a-z]",
+            # Revolut bank debits/account transfers/standing orders (internal operations)
+            r"debit\s+(mobile banking|ebanking mobile|standing order|account transfer):",
+            r"^revolut\s+(bank|ltd)",
+            # TWINT payments to individuals (format: "TWINT: , NAME +phonenumber")
+            r"debit twint:\s*,\s+[a-z\s]+\+\d+",
+        ],
         "Utilities": [
             r"\b(swisscom|sunrise|upc|telecom|electricity|water|gas|energie|power|hydro|utility|bill)\b",
         ],
@@ -56,10 +72,7 @@ class SemanticCategorizer:
             r"\b(dm drogerie|medicine|vitamins)\b",
         ],
         "Bank Transfer": [
-            r"\b(transfer|payment from|payment to|wire|revolut|paypal)\b",
-        ],
-        "Uncounted": [
-            r"\b(exchange|exchanged|internal transfer|balance migration|top-up)\b",
+            r"\b(wire|revolut|paypal)\b",  # Removed "transfer" and "payment from" which are too generic
         ],
     }
 
