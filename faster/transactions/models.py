@@ -1,6 +1,36 @@
 from django.db import models
 
 
+class DashboardSettings(models.Model):
+    """Store dashboard-wide settings like excluded categories"""
+
+    excluded_categories = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of category names to exclude from dashboard calculations and displays",
+    )
+
+    class Meta:
+        verbose_name_plural = "Dashboard Settings"
+
+    def __str__(self):
+        return (
+            f"Dashboard Settings (Excluding {len(self.excluded_categories)} categories)"
+        )
+
+    @staticmethod
+    def get_settings():
+        """Get or create the dashboard settings"""
+        settings, created = DashboardSettings.objects.get_or_create(pk=1)
+        return settings
+
+    @staticmethod
+    def get_excluded_categories():
+        """Get list of excluded categories"""
+        settings = DashboardSettings.get_settings()
+        return settings.excluded_categories or []
+
+
 class UploadedFile(models.Model):
     name = models.CharField(max_length=256)
     uploaded_at = models.DateTimeField(auto_now_add=True)

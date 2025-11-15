@@ -503,15 +503,15 @@ function setTimeFilter(period) {
   });
 
   function updateChart(categories) {
-    chart.data.labels = categories;
-    chart.data.datasets[0].data = categories.map((cat) => categoryTotals[cat]);
-    chart.data.datasets[0].backgroundColor = categories.map(
+    window.expensesChart.data.labels = categories;
+    window.expensesChart.data.datasets[0].data = categories.map((cat) => categoryTotals[cat]);
+    window.expensesChart.data.datasets[0].backgroundColor = categories.map(
       (_, i) => colors[i % colors.length]
     );
-    chart.data.datasets[0].borderColor = categories.map((_, i) =>
+    window.expensesChart.data.datasets[0].borderColor = categories.map((_, i) =>
       colors[i % colors.length].replace("0.7", "1")
     );
-    chart.update();
+    window.expensesChart.update();
   }
 </script>
 

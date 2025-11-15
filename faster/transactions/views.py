@@ -1,13 +1,46 @@
+"""Helper functions for dashboard views"""
+
+
+def get_excluded_categories():
+    """Get list of excluded categories from dashboard settings"""
+    try:
+        from .models import DashboardSettings
+
+        return DashboardSettings.get_excluded_categories()
+    except Exception:
+        return []
+
+
+def filter_transactions_by_excluded_categories(transactions, excluded_categories=None):
+    """Filter out transactions with excluded categories"""
+    if excluded_categories is None:
+        excluded_categories = get_excluded_categories()
+
+    return [t for t in transactions if t.category not in excluded_categories]
+
+
+def filter_category_totals_by_excluded(category_totals, excluded_categories=None):
+    """Remove excluded categories from category totals"""
+    if excluded_categories is None:
+        excluded_categories = get_excluded_categories()
+
+    return {k: v for k, v in category_totals.items() if k not in excluded_categories}
+
+
 def settings_view(request):
     """Settings view for managing data sources, currencies, and uploads"""
     import json
 
-    from .models import Transaction, UploadedFile
+    from .models import DashboardSettings, Transaction, UploadedFile
 
     files = UploadedFile.objects.all().order_by("-uploaded_at")
     all_currencies = sorted(
         set(t.currency for t in Transaction.objects.all() if t.currency)
     )
+
+    # Get excluded categories from database
+    dashboard_settings = DashboardSettings.get_settings()
+    excluded_categories = dashboard_settings.excluded_categories or []
 
     # Get current settings from session
     selected_file_ids = request.session.get("selected_file_ids", [])
@@ -224,6 +257,7 @@ def settings_view(request):
             "all_categories": all_categories,
             "selected_file_ids": selected_file_ids,
             "selected_currencies": selected_currencies,
+            "excluded_categories": excluded_categories,
             "error": error,
             "success": success,
         },
@@ -295,6 +329,12 @@ def expenses_vs_income(request):
     # Filter by currencies if selected in session
     if selected_currencies:
         transactions = [t for t in transactions if t.currency in selected_currencies]
+
+    # Filter out excluded categories
+    excluded_categories = get_excluded_categories()
+    transactions = filter_transactions_by_excluded_categories(
+        transactions, excluded_categories
+    )
 
     # Get unique categories for checkboxes
     from collections import defaultdict
@@ -424,6 +464,12 @@ def expenses_by_category(request):
         filtered_transactions = [
             t for t in filtered_transactions if t.currency in selected_currencies
         ]
+
+    # Filter out excluded categories
+    excluded_categories = get_excluded_categories()
+    filtered_transactions = filter_transactions_by_excluded_categories(
+        filtered_transactions, excluded_categories
+    )
 
     transactions_qs = filtered_transactions
     # Filter to only include expenses (negative amounts) and convert to positive
@@ -558,6 +604,12 @@ def income_by_category(request):
             t for t in filtered_transactions if t.currency in selected_currencies
         ]
 
+    # Filter out excluded categories
+    excluded_categories = get_excluded_categories()
+    filtered_transactions = filter_transactions_by_excluded_categories(
+        filtered_transactions, excluded_categories
+    )
+
     transactions_qs = filtered_transactions
     # Filter to only include income (positive amounts)
     transactions = [
@@ -617,6 +669,205 @@ def income_by_category(request):
             "filtered_category_totals_json": json.dumps(filtered_category_totals),
             "all_currencies": all_currencies,
             "selected_currencies": selected_currencies,
+        },
+    )
+
+
+def monthly_budget(request):
+    """Monthly budget view showing spending by category with historical averages"""
+    import datetime
+    from collections import defaultdict
+
+    from .models import Transaction, UploadedFile
+
+    # Get filters from session
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    selected_currencies = request.session.get("selected_currencies", [])
+
+    files = UploadedFile.objects.all().order_by("-uploaded_at")
+
+    # Get all transactions
+    qs = Transaction.objects.all()
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+
+    all_transactions = list(qs)
+
+    # Get unique currencies for dropdown
+    all_currencies = sorted(
+        {t.currency for t in Transaction.objects.all() if t.currency}
+    )
+
+    # Helper function to parse date strings
+    def parse_date(date_str):
+        if not date_str:
+            return None
+        for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+            try:
+                return datetime.datetime.strptime(date_str, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    # Filter by currencies if selected in session
+    if selected_currencies:
+        all_transactions = [
+            t for t in all_transactions if t.currency in selected_currencies
+        ]
+
+    # Filter out excluded categories
+    excluded_categories = get_excluded_categories()
+    all_transactions = filter_transactions_by_excluded_categories(
+        all_transactions, excluded_categories
+    )
+
+    # Determine primary currency (most common in filtered transactions)
+    currency_counts = defaultdict(int)
+    for t in all_transactions:
+        if t.currency:
+            currency_counts[t.currency] += 1
+    primary_currency = max(currency_counts, default="CHF") if currency_counts else "CHF"
+
+    # Group transactions by month and category
+    monthly_by_category = defaultdict(lambda: defaultdict(float))
+
+    for t in all_transactions:
+        if not t.amount or t.amount > 0 or not t.category or t.category == "Uncounted":
+            continue  # Skip income and uncategorized
+
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+
+        month_key = transaction_date.strftime("%Y-%m")
+        monthly_by_category[month_key][t.category] += abs(t.amount)
+
+    # Calculate statistics for each category
+    category_stats = defaultdict(
+        lambda: {
+            "months": [],
+            "amounts": [],
+            "total": 0.0,
+            "average": 0.0,
+            "min": float("inf"),
+            "max": 0.0,
+            "count": 0,
+        }
+    )
+
+    for month_key in sorted(monthly_by_category.keys()):
+        for category, amount in monthly_by_category[month_key].items():
+            category_stats[category]["months"].append(month_key)
+            category_stats[category]["amounts"].append(amount)
+            category_stats[category]["total"] += amount
+            category_stats[category]["min"] = min(
+                category_stats[category]["min"], amount
+            )
+            category_stats[category]["max"] = max(
+                category_stats[category]["max"], amount
+            )
+            category_stats[category]["count"] += 1
+
+    # Calculate averages
+    for category in category_stats:
+        if category_stats[category]["count"] > 0:
+            category_stats[category]["average"] = (
+                category_stats[category]["total"] / category_stats[category]["count"]
+            )
+        if category_stats[category]["min"] == float("inf"):
+            category_stats[category]["min"] = 0
+
+    # Get current month
+    today = datetime.date.today()
+    current_month = today.strftime("%Y-%m")
+    current_month_spending = monthly_by_category.get(current_month, {})
+
+    # Prepare data for chart - show last 12 months
+    all_months = sorted(
+        set(
+            month
+            for months in [stats["months"] for stats in category_stats.values()]
+            for month in months
+        )
+    )
+
+    if len(all_months) == 0:
+        all_months = [current_month]
+
+    # Prepare chart data - ALL categories sorted by average spending
+    all_categories = sorted(
+        [(cat, stats["average"]) for cat, stats in category_stats.items()],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    category_labels = [cat[0] for cat in all_categories]
+    category_averages = [cat[1] for cat in all_categories]
+
+    chart_data = {
+        "labels": category_labels,
+        "averages": category_averages,
+    }
+
+    # Calculate totals for the overview
+    current_month_total = sum(current_month_spending.values())
+
+    # Calculate average spending per month (total of all months / number of months)
+    total_all_months = sum(
+        sum(monthly_by_category[month].values()) for month in monthly_by_category.keys()
+    )
+    num_months = len(monthly_by_category) if monthly_by_category else 1
+    average_spending = total_all_months / num_months if num_months > 0 else 0
+
+    # Prepare category rows with pre-calculated comparison values
+    category_rows = []
+    for category, stats in sorted(
+        category_stats.items(), key=lambda x: x[1]["average"], reverse=True
+    ):
+        current_amount = current_month_spending.get(category, 0)
+        is_over_budget = (
+            current_amount > stats["average"] if stats["average"] > 0 else False
+        )
+        difference = abs(current_amount - stats["average"]) if current_amount > 0 else 0
+
+        category_rows.append(
+            {
+                "category": category,
+                "current_amount": current_amount,
+                "average": stats["average"],
+                "min": stats["min"],
+                "max": stats["max"],
+                "count": stats["count"],
+                "is_over_budget": is_over_budget,
+                "difference": difference,
+            }
+        )
+
+    import json
+
+    return render(
+        request,
+        "dashboard/monthly_budget.html",
+        {
+            "current_month": current_month,
+            "current_month_total": current_month_total,
+            "average_spending": average_spending,
+            "all_months": all_months,
+            "category_stats": dict(
+                sorted(
+                    category_stats.items(), key=lambda x: x[1]["average"], reverse=True
+                )
+            ),
+            "category_rows": category_rows,
+            "current_month_spending": dict(
+                sorted(current_month_spending.items(), key=lambda x: x[1], reverse=True)
+            ),
+            "chart_data": json.dumps(chart_data),
+            "files": files,
+            "selected_file_ids": selected_file_ids,
+            "all_currencies": all_currencies,
+            "selected_currencies": selected_currencies,
+            "primary_currency": primary_currency,
         },
     )
 
@@ -688,6 +939,12 @@ def dashboard(request):
             filtered_transactions.append(t)
 
     all_transactions = filtered_transactions
+
+    # Filter out excluded categories
+    excluded_categories = get_excluded_categories()
+    all_transactions = filter_transactions_by_excluded_categories(
+        all_transactions, excluded_categories
+    )
 
     # Calculate top spending categories (negative amounts) with currency breakdown
     expense_by_category_currency = defaultdict(lambda: defaultdict(float))
@@ -780,6 +1037,29 @@ def dashboard(request):
         for t in all_transactions[:50]
     ]
 
+    # Calculate monthly expenses vs income data
+    monthly_data = defaultdict(lambda: {"expenses": 0.0, "income": 0.0})
+    for t in all_transactions:
+        transaction_date = parse_date(t.date)
+        if not transaction_date:
+            continue
+        month_key = transaction_date.strftime("%Y-%m")
+        if t.amount and t.amount < 0:
+            monthly_data[month_key]["expenses"] += abs(t.amount)
+        elif t.amount and t.amount > 0:
+            monthly_data[month_key]["income"] += t.amount
+
+    sorted_months = sorted(monthly_data.keys())
+    monthly_labels = sorted_months
+    monthly_expenses = [monthly_data[month]["expenses"] for month in sorted_months]
+    monthly_income = [monthly_data[month]["income"] for month in sorted_months]
+
+    monthly_chart_data = {
+        "labels": monthly_labels,
+        "expenses": monthly_expenses,
+        "income": monthly_income,
+    }
+
     return render(
         request,
         "transactions/dashboard.html",
@@ -789,6 +1069,7 @@ def dashboard(request):
             "top_income": top_income,
             "top_spending_json": json.dumps(top_spending),
             "top_income_json": json.dumps(top_income),
+            "monthly_chart_data": json.dumps(monthly_chart_data),
         },
     )
 
@@ -1001,6 +1282,12 @@ def expenses_by_category_data_ajax(request):
                     filtered_transactions.append(t)
             transactions = filtered_transactions
 
+        # Filter out excluded categories
+        excluded_categories = get_excluded_categories()
+        transactions = [
+            t for t in transactions if t.get("category") not in excluded_categories
+        ]
+
         # Filter for expenses (negative amounts)
         expense_transactions = [t for t in transactions if t["amount"] < 0]
 
@@ -1153,6 +1440,12 @@ def income_by_category_data_ajax(request):
                 if t_date and custom_start <= t_date <= custom_end:
                     filtered_transactions.append(t)
             transactions = filtered_transactions
+
+        # Filter out excluded categories
+        excluded_categories = get_excluded_categories()
+        transactions = [
+            t for t in transactions if t.get("category") not in excluded_categories
+        ]
 
         # Filter for income (positive amounts)
         income_transactions = [t for t in transactions if t["amount"] > 0]
@@ -1369,6 +1662,99 @@ def api_recategorize_uncategorized(request):
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
+def dashboard_monthly_data_ajax(request):
+    """AJAX endpoint for monthly expenses vs income data on dashboard"""
+    import datetime
+    from collections import defaultdict
+
+    from .models import Transaction
+
+    try:
+        # Get time filter parameters
+        time_filter = request.GET.get("time_filter", "all")
+        custom_start = None
+        custom_end = None
+
+        # Parse date helper function
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+                try:
+                    return datetime.datetime.strptime(date_str, fmt).date()
+                except Exception:
+                    continue
+            return None
+
+        # Handle time filtering
+        if time_filter == "custom":
+            start_date_str = request.GET.get("start_date")
+            end_date_str = request.GET.get("end_date")
+            custom_start = parse_date(start_date_str)
+            custom_end = parse_date(end_date_str)
+        elif time_filter == "last_year":
+            today = datetime.date.today()
+            custom_start = today - datetime.timedelta(days=365)
+            custom_end = today
+        else:
+            # 'all' time means no filtering
+            pass
+
+        # Get all transactions
+        transactions = list(Transaction.objects.all().values())
+
+        # Apply time filtering
+        if custom_start and custom_end:
+            filtered_transactions = []
+            for t in transactions:
+                t_date = parse_date(t["date"])
+                if t_date and custom_start <= t_date <= custom_end:
+                    filtered_transactions.append(t)
+            transactions = filtered_transactions
+
+        # Filter out excluded categories
+        excluded_categories = get_excluded_categories()
+        transactions = [
+            t for t in transactions if t.get("category") not in excluded_categories
+        ]
+
+        # Group by month
+        monthly_data = defaultdict(lambda: {"expenses": 0.0, "income": 0.0})
+
+        for t in transactions:
+            t_date = parse_date(t["date"])
+            if not t_date:
+                continue
+
+            # Create month key (YYYY-MM)
+            month_key = t_date.strftime("%Y-%m")
+
+            if t["amount"] < 0:
+                monthly_data[month_key]["expenses"] += abs(t["amount"])
+            elif t["amount"] > 0:
+                monthly_data[month_key]["income"] += t["amount"]
+
+        # Sort by month and prepare for chart
+        sorted_months = sorted(monthly_data.keys())
+        labels = sorted_months
+        expenses_data = [monthly_data[month]["expenses"] for month in sorted_months]
+        income_data = [monthly_data[month]["income"] for month in sorted_months]
+
+        return JsonResponse(
+            {
+                "success": True,
+                "chart_data": {
+                    "labels": labels,
+                    "expenses": expenses_data,
+                    "income": income_data,
+                },
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_low_confidence_transactions(request):
@@ -1410,6 +1796,43 @@ def api_get_category_suggestions(request):
 
         suggestions = categorization_service.get_suggestions_for_merchant(merchant_text)
         return JsonResponse({"success": True, "suggestions": suggestions})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+def api_update_excluded_categories(request):
+    """API endpoint to update excluded categories"""
+    import json
+
+    try:
+        from .models import DashboardSettings
+
+        data = json.loads(request.body)
+        excluded_categories = data.get("excluded_categories", [])
+
+        # Validate that all items are strings
+        if not isinstance(excluded_categories, list):
+            return JsonResponse(
+                {"success": False, "error": "excluded_categories must be a list"},
+                status=400,
+            )
+
+        excluded_categories = [str(cat).strip() for cat in excluded_categories]
+
+        # Update or create dashboard settings
+        settings = DashboardSettings.get_settings()
+        settings.excluded_categories = excluded_categories
+        settings.save()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Excluded categories updated successfully",
+                "excluded_categories": excluded_categories,
+            }
+        )
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)

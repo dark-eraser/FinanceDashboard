@@ -10,6 +10,7 @@ urlpatterns = [
     ),
     path("income-by-category/", views.income_by_category, name="income_by_category"),
     path("expenses-vs-income/", views.expenses_vs_income, name="expenses_vs_income"),
+    path("monthly-budget/", views.monthly_budget, name="monthly_budget"),
     path("delete-file/<int:file_id>/", views.delete_file, name="delete_file"),
     # API endpoints
     path("api/transactions/", views.api_get_transactions, name="api_get_transactions"),
@@ -22,6 +23,11 @@ urlpatterns = [
         "api/categories/create/", views.api_create_category, name="api_create_category"
     ),
     path("api/dashboard-data/", views.dashboard_data_ajax, name="dashboard_data_ajax"),
+    path(
+        "api/dashboard-monthly-data/",
+        views.dashboard_monthly_data_ajax,
+        name="dashboard_monthly_data_ajax",
+    ),
     path(
         "api/expenses-by-category-data/",
         views.expenses_by_category_data_ajax,
@@ -57,5 +63,10 @@ urlpatterns = [
         "api/categorization/suggestions/",
         views.api_get_category_suggestions,
         name="api_get_category_suggestions",
+    ),
+    path(
+        "api/excluded-categories/",
+        views.api_update_excluded_categories,
+        name="api_update_excluded_categories",
     ),
 ]
