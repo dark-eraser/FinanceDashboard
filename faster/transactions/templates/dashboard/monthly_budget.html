@@ -76,7 +76,7 @@
     </div>
     <div class="p-6">
       <div class="flex justify-center">
-        <div class="w-full h-96">
+        <div class="w-full" style="height: 600px;">
           <canvas id="averageSpendingChart"></canvas>
         </div>
       </div>
@@ -251,7 +251,7 @@
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       indexAxis: 'y',
       plugins: {
         legend: {
@@ -271,7 +271,13 @@
           ticks: {
             callback: function(value) {
               return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
-            }
+            },
+            color: '#6b7280'
+          }
+        },
+        y: {
+          ticks: {
+            color: '#6b7280'
           }
         }
       }
