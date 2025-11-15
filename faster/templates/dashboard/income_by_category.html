@@ -1,0 +1,576 @@
+{% extends "base.html" %} {% block content %}
+
+<!-- Header -->
+<div class="mb-8">
+  <h1 class="text-4xl font-bold text-gray-900 mb-2">
+    <i class="bi bi-cash-stack text-green-600"></i>
+    Income by Category
+  </h1>
+  <p class="text-gray-600">Track your income sources and analyze earning patterns</p>
+</div>
+
+<script>
+function setTimeFilter(period) {
+    // Update UI
+    document.querySelectorAll('.time-filter-btn').forEach(btn => {
+      btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+    });
+    document.getElementById('filter-' + period).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+    
+    // Hide custom inputs
+    document.getElementById('customDateInputs').classList.add('hidden');
+    
+    // Set session storage
+    sessionStorage.setItem('timeFilter', period);
+    sessionStorage.removeItem('customStartDate');
+    sessionStorage.removeItem('customEndDate');
+    
+    // Load data dynamically instead of page reload
+    loadIncomeData('?time_filter=' + period);
+  }
+</script>
+
+<!-- Active Filters Banner -->
+<div
+  class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-lg shadow-sm"
+>
+  <div class="flex items-center justify-between">
+    <div class="flex items-center">
+      <i class="bi bi-funnel-fill text-indigo-600 text-xl mr-3"></i>
+      <div>
+        <p class="font-semibold text-gray-800">Active Filters</p>
+        <p class="text-sm text-gray-600">
+          {% if selected_file_ids %}
+            {{ selected_file_ids|length }} file(s) selected
+          {% else %}
+            All files
+          {% endif %}
+          |
+          {% if selected_currencies %}
+            {{ selected_currencies|join:", " }}
+          {% else %}
+            All currencies
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <a
+      href="{% url 'settings' %}"
+      class="bg-white hover:bg-gray-50 text-indigo-700 px-4 py-2 rounded-lg font-semibold transition duration-200 flex items-center space-x-2 shadow-sm border border-indigo-200"
+    >
+      <i class="bi bi-gear-fill"></i>
+      <span>Change Filters</span>
+    </a>
+  </div>
+</div>
+
+<!-- Chart and Category Filter Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <!-- Chart -->
+  <div
+    class="lg:col-span-2 bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition duration-300"
+  >
+    <div
+      class="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl"
+    >
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-graph-up mr-2"></i>
+        Income Overview
+      </h2>
+    </div>
+    <div class="relative" style="height: 400px">
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Category Filters -->
+  <div
+    class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+  >
+    <div class="bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-4">
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-tags-fill mr-2"></i>
+        Show Categories
+      </h2>
+    </div>
+    <div class="p-6 max-h-[400px] overflow-y-auto" id="category-checkboxes">
+      {% for category, total in filtered_category_totals.items %}
+      <label
+        class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200 mb-2"
+      >
+        <input
+          class="w-4 h-4 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500 category-filter"
+          type="checkbox"
+          value="{{ category }}"
+          id="cat-{{ forloop.counter }}"
+          checked
+        />
+        <span class="ml-3 text-sm font-medium text-gray-900"
+          >{{ category }}</span
+        >
+        <span class="ml-auto text-xs font-semibold text-green-600"
+          >{{ total|floatformat:2 }}</span
+        >
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Category Totals Table -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+  <button
+    onclick="toggleSection('totals')"
+    class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-emerald-600 hover:to-teal-600 transition duration-200"
+  >
+    <h2 class="text-xl font-bold text-white flex items-center">
+      <i class="bi bi-list-ul mr-2"></i>
+      Category Totals
+    </h2>
+    <i class="bi bi-chevron-down text-white text-xl" id="totals-icon"></i>
+  </button>
+  <div id="totals-content" class="p-6">
+    <div class="overflow-x-auto">
+      <table
+        class="min-w-full divide-y divide-gray-200"
+        id="category-totals-table"
+      >
+        <thead>
+          <tr class="bg-gray-50">
+            <th
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Category
+            </th>
+            <th
+              class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Total Amount
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for category, total in filtered_category_totals.items %}
+          <tr
+            data-category="{{ category }}"
+            class="hover:bg-gray-50 transition duration-200"
+          >
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
+              >
+                {{ category }}
+              </span>
+            </td>
+            <td
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-green-600"
+            >
+              {{ total|floatformat:2 }} CHF
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+  <button
+    onclick="toggleSection('transactions')"
+    class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-teal-600 hover:to-cyan-700 transition duration-200"
+  >
+    <h2 class="text-xl font-bold text-white flex items-center">
+      <i class="bi bi-receipt mr-2"></i>
+      Transaction Details
+    </h2>
+    <i
+      class="bi bi-chevron-right text-white text-xl"
+      id="transactions-icon"
+    ></i>
+  </button>
+  <div id="transactions-content" class="p-6 hidden">
+    <div class="overflow-x-auto">
+      <table
+        class="min-w-full divide-y divide-gray-200"
+        id="transactions-table"
+      >
+        <thead>
+          <tr class="bg-gray-50">
+            <th
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Date
+            </th>
+            <th
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Description
+            </th>
+            <th
+              class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Amount
+            </th>
+            <th
+              class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Currency
+            </th>
+            <th
+              class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Category
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for tx in transactions %} {% if tx.Category != 'Uncounted' %}
+          <tr
+            data-category="{{ tx.Category }}"
+            class="hover:bg-gray-50 transition duration-200"
+          >
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {{ tx.Date }}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-900">
+              {{ tx.Booking_text }}
+            </td>
+            <td
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-green-600"
+            >
+              {{ tx.Amount|floatformat:2 }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              <span
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800"
+                >{{ tx.Currency }}</span
+              >
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
+                >{{ tx.Category }}</span
+              >
+            </td>
+          </tr>
+          {% endif %} {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Time Filter Functions are defined at the top of the page
+
+  function toggleCustomDateRange() {
+    const customInputs = document.getElementById('customDateInputs');
+    const isHidden = customInputs.classList.contains('hidden');
+    
+    if (isHidden) {
+      customInputs.classList.remove('hidden');
+      // Update button style
+      document.querySelectorAll('.time-filter-btn').forEach(btn => {
+        btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+      });
+      document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+    } else {
+      customInputs.classList.add('hidden');
+    }
+  }
+
+  function applyCustomDateRange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+      alert('Please select both start and end dates');
+      return;
+    }
+    
+    // Set session storage
+    sessionStorage.setItem('timeFilter', 'custom');
+    sessionStorage.setItem('customStartDate', startDate);
+    sessionStorage.setItem('customEndDate', endDate);
+    
+    // Load data dynamically with custom dates
+    loadIncomeData('?time_filter=custom&start_date=' + startDate + '&end_date=' + endDate);
+  }
+
+  // Dynamic data loading function
+  function loadIncomeData(queryParams) {
+    console.log('loadIncomeData called with:', queryParams);
+    
+    const url = '/api/income-by-category-data/' + queryParams;
+    console.log('Fetching URL:', url);
+    
+    fetch(url)
+      .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+          updateIncomeChart(data);
+        } else {
+          console.error('Failed to load income data:', data.error);
+          alert('Failed to load data. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error loading income data:', error);
+        alert('Network error. Please check your connection and try again.');
+      });
+  }
+
+  function updateIncomeChart(data) {
+    if (window.incomeChart && data.chart_data) {
+      window.incomeChart.data.labels = data.chart_data.labels;
+      window.incomeChart.data.datasets[0].data = data.chart_data.amounts;
+      window.incomeChart.update('active');
+    }
+  }
+
+  // Initialize filter on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check URL parameters first
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTimeFilter = urlParams.get('time_filter');
+    const urlStartDate = urlParams.get('start_date');
+    const urlEndDate = urlParams.get('end_date');
+    
+    let activeFilter = urlTimeFilter || sessionStorage.getItem('timeFilter') || 'all';
+    
+    // Update button styles
+    document.querySelectorAll('.time-filter-btn').forEach(btn => {
+      btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+    });
+    
+    if (activeFilter === 'custom') {
+      const startDate = urlStartDate || sessionStorage.getItem('customStartDate');
+      const endDate = urlEndDate || sessionStorage.getItem('customEndDate');
+      if (startDate && endDate) {
+        document.getElementById('startDate').value = startDate;
+        document.getElementById('endDate').value = endDate;
+        document.getElementById('customDateInputs').classList.remove('hidden');
+        document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+        
+        // Save to session storage
+        sessionStorage.setItem('customStartDate', startDate);
+        sessionStorage.setItem('customEndDate', endDate);
+      }
+    } else {
+      document.getElementById('filter-' + activeFilter).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+    }
+    
+    // Save active filter to session
+    sessionStorage.setItem('timeFilter', activeFilter);
+  });
+
+  // Toggle sections
+  function toggleSection(section) {
+    const content = document.getElementById(section + "-content");
+    const icon = document.getElementById(section + "-icon");
+
+    if (content.classList.contains("hidden")) {
+      content.classList.remove("hidden");
+      icon.classList.remove("bi-chevron-right");
+      icon.classList.add("bi-chevron-down");
+    } else {
+      content.classList.add("hidden");
+      icon.classList.remove("bi-chevron-down");
+      icon.classList.add("bi-chevron-right");
+    }
+  }
+
+  // Filter table and chart by selected categories
+  document.querySelectorAll(".category-filter").forEach(function (checkbox) {
+    checkbox.addEventListener("change", function () {
+      const checkedCategories = Array.from(
+        document.querySelectorAll(".category-filter:checked")
+      ).map((cb) => cb.value);
+
+      // Update tables
+      document
+        .querySelectorAll("#category-totals-table tbody tr")
+        .forEach(function (row) {
+          row.style.display = checkedCategories.includes(
+            row.getAttribute("data-category")
+          )
+            ? ""
+            : "none";
+        });
+
+      document
+        .querySelectorAll("#transactions-table tbody tr")
+        .forEach(function (row) {
+          row.style.display = checkedCategories.includes(
+            row.getAttribute("data-category")
+          )
+            ? ""
+            : "none";
+        });
+
+      // Update chart
+      updateChart(checkedCategories);
+    });
+  });
+
+  // Chart.js setup
+  const categoryTotals = JSON.parse(
+    "{{ filtered_category_totals_json|safe|escapejs }}"
+  );
+  const ctx = document.getElementById("categoryChart").getContext("2d");
+
+  // Generate vibrant green/teal colors for income categories
+  const colors = [
+    "rgba(34, 197, 94, 0.7)", // green
+    "rgba(16, 185, 129, 0.7)", // emerald
+    "rgba(20, 184, 166, 0.7)", // teal
+    "rgba(6, 182, 212, 0.7)", // cyan
+    "rgba(14, 165, 233, 0.7)", // sky
+    "rgba(34, 211, 238, 0.7)", // cyan bright
+    "rgba(74, 222, 128, 0.7)", // green bright
+    "rgba(45, 212, 191, 0.7)", // teal bright
+  ];
+
+  window.incomeChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: Object.keys(categoryTotals),
+      datasets: [
+        {
+          label: "Income Amount",
+          data: Object.values(categoryTotals),
+          backgroundColor: Object.keys(categoryTotals).map(
+            (_, i) => colors[i % colors.length]
+          ),
+          borderColor: Object.keys(categoryTotals).map((_, i) =>
+            colors[i % colors.length].replace("0.7", "1")
+          ),
+          borderWidth: 2,
+          borderRadius: 8,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
+          padding: 12,
+          titleFont: { size: 14, weight: "bold" },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: function (context) {
+              return "Amount: " + context.parsed.y.toFixed(2) + " CHF";
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)",
+          },
+          ticks: {
+            callback: function (value) {
+              return value.toFixed(0) + " CHF";
+            },
+          },
+        },
+        x: {
+          grid: {
+            display: false,
+          },
+        },
+      },
+    },
+  });
+
+  function updateChart(selectedCategories) {
+    const filteredLabels = [];
+    const filteredData = [];
+    for (const category in categoryTotals) {
+      if (selectedCategories.includes(category)) {
+        filteredLabels.push(category);
+        filteredData.push(categoryTotals[category]);
+      }
+    }
+    chart.data.labels = filteredLabels;
+    chart.data.datasets[0].data = filteredData;
+    chart.data.datasets[0].backgroundColor = filteredLabels.map(
+      (_, i) => colors[i % colors.length]
+    );
+    chart.data.datasets[0].borderColor = filteredLabels.map((_, i) =>
+      colors[i % colors.length].replace("0.7", "1")
+    );
+    chart.update();
+  }
+</script>
+
+<!-- Compact Time Filter (Bottom Right) -->
+<div class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-40">
+  <div class="flex flex-col gap-2">
+    <div class="text-xs font-semibold text-gray-600 mb-1">
+      <i class="bi bi-calendar-range text-indigo-600"></i> Time Period
+    </div>
+    
+    <div class="flex flex-col gap-1">
+      <button
+        type="button"
+        onclick="setTimeFilter('all')"
+        id="filter-all"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white"
+      >
+        All Time
+      </button>
+      <button
+        type="button"
+        onclick="setTimeFilter('last_year')"
+        id="filter-last_year"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      >
+        Last Year
+      </button>
+      <button
+        type="button"
+        onclick="toggleCustomDateRange()"
+        id="filter-custom"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      >
+        Custom
+      </button>
+    </div>
+
+    <!-- Custom Date Range Inputs (Hidden by default) -->
+    <div id="customDateInputs" class="hidden mt-2 space-y-2">
+      <input
+        type="date"
+        id="startDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+      <input
+        type="date"
+        id="endDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+      <button
+        type="button"
+        onclick="applyCustomDateRange()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium transition duration-200"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
