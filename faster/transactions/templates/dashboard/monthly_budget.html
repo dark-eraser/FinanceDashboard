@@ -13,17 +13,43 @@
   </p>
 </div>
 
+<!-- Comparison with Toggle Buttons -->
+<div class="mb-8 bg-white rounded-xl shadow-md p-6">
+  <div class="flex flex-col gap-4">
+    <div>
+      <h3 class="text-lg font-semibold text-gray-900">Compare Against Average</h3>
+      <p class="text-sm text-gray-600 mt-1">Select which month to analyze</p>
+    </div>
+    
+    <!-- Toggle Buttons -->
+    <div class="flex gap-3">
+      <button type="button" 
+              data-mode="current" 
+              class="comparison-toggle-button px-6 py-3 rounded-lg font-medium border-2 transition"
+              onclick="switchComparisonMode('current')">
+        <i class="bi bi-calendar-fill mr-2"></i>This Month
+      </button>
+      <button type="button" 
+              data-mode="previous" 
+              class="comparison-toggle-button px-6 py-3 rounded-lg font-medium border-2 transition"
+              onclick="switchComparisonMode('previous')">
+        <i class="bi bi-calendar-range mr-2"></i>Previous Month
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Current Month Overview -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-  <!-- Total Spending This Month -->
+  <!-- Month Spending Card (Dynamic) -->
   <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-600 uppercase">This Month's Spending</p>
+        <p class="text-sm font-medium text-gray-600 uppercase month-label">This Month's Spending</p>
         <p class="text-3xl font-bold text-gray-900 mt-2">
-          {{ current_month_total|floatformat:0|intcomma }} <span class="text-xl font-semibold text-gray-500">{{ primary_currency }}</span>
+          <span class="month-amount">{{ current_month_total|floatformat:0|intcomma }}</span> <span class="text-xl font-semibold text-gray-500">{{ primary_currency }}</span>
         </p>
-        <p class="text-xs text-gray-500 mt-1">{{ current_month }}</p>
+        <p class="text-xs text-gray-500 mt-1 month-date">{{ current_month }}</p>
       </div>
       <div class="bg-red-100 rounded-full p-3">
         <i class="bi bi-calendar-fill text-red-600 text-2xl"></i>
@@ -47,18 +73,18 @@
     </div>
   </div>
 
-  <!-- Number of Categories -->
+  <!-- Difference Card (Dynamic) -->
   <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-600 uppercase">Categories</p>
-        <p class="text-3xl font-bold text-gray-900 mt-2">
-          {{ category_stats|length }}
+        <p class="text-sm font-medium text-gray-600 uppercase">Difference from Average</p>
+        <p class="text-3xl font-bold mt-2">
+          <span class="difference-amount text-gray-900">{{ current_month_total|floatformat:0|intcomma }}</span> <span class="text-xl font-semibold text-gray-500">{{ primary_currency }}</span>
         </p>
-        <p class="text-xs text-gray-500 mt-1">Being tracked</p>
+        <p class="text-xs text-gray-500 mt-1 difference-label">Over budget</p>
       </div>
-      <div class="bg-purple-100 rounded-full p-3">
-        <i class="bi bi-tags-fill text-purple-600 text-2xl"></i>
+      <div class="difference-icon bg-purple-100 rounded-full p-3">
+        <i class="bi bi-arrow-up text-purple-600 text-2xl"></i>
       </div>
     </div>
   </div>
@@ -97,7 +123,8 @@
       <thead class="bg-gray-50 border-b border-gray-200">
         <tr>
           <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Category</th>
-          <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">This Month</th>
+          <th class="month-column px-6 py-3 text-right text-sm font-semibold text-gray-900">This Month</th>
+          <th class="month-column hidden px-6 py-3 text-right text-sm font-semibold text-gray-900" data-mode="previous">Previous Month</th>
           <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">Average</th>
           <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">Min</th>
           <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">Max</th>
@@ -107,20 +134,31 @@
       </thead>
       <tbody class="divide-y divide-gray-200">
         {% for item in category_rows %}
-          {% if item.is_over_budget %}
-            <tr class="hover:bg-red-50 transition">
+          {% if item.is_current_over_budget %}
+            <tr class="category-row hover:bg-red-50 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
           {% elif item.current_amount > 0 %}
-            <tr class="hover:bg-green-50 transition">
+            <tr class="category-row hover:bg-green-50 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
           {% else %}
-            <tr class="hover:bg-gray-50 transition">
+            <tr class="category-row hover:bg-gray-50 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
           {% endif %}
             <td class="px-6 py-4">
               <p class="font-medium text-gray-900">{{ item.category }}</p>
             </td>
-            <td class="px-6 py-4 text-right">
-              <p class="text-gray-900 font-semibold">
+            <!-- Current Month Cell -->
+            <td class="month-cell px-6 py-4 text-right" data-mode="current">
+              <p class="text-gray-900 font-semibold month-value">
                 {% if item.current_amount > 0 %}
                   {{ item.current_amount|floatformat:0|intcomma }}
+                {% else %}
+                  <span class="text-gray-400">-</span>
+                {% endif %}
+              </p>
+            </td>
+            <!-- Previous Month Cell -->
+            <td class="month-cell hidden px-6 py-4 text-right" data-mode="previous">
+              <p class="text-gray-900 font-semibold month-value">
+                {% if item.previous_amount > 0 %}
+                  {{ item.previous_amount|floatformat:0|intcomma }}
                 {% else %}
                   <span class="text-gray-400">-</span>
                 {% endif %}
@@ -136,21 +174,38 @@
               <p class="text-gray-600">{{ item.max|floatformat:0|intcomma }}</p>
             </td>
             <td class="px-6 py-4 text-right">
-              {% if item.current_amount > 0 %}
-                {% if item.is_over_budget %}
-                  <span class="inline-flex items-center space-x-1 text-red-600 font-semibold">
-                    <i class="bi bi-arrow-up"></i>
-                    <span>+{{ item.difference|floatformat:0|intcomma }}</span>
-                  </span>
+              <span class="difference-cell">
+                {% if item.current_amount > 0 %}
+                  {% if item.is_current_over_budget %}
+                    <span class="inline-flex items-center space-x-1 text-red-600 font-semibold current-diff">
+                      <i class="bi bi-arrow-up"></i>
+                      <span>+{{ item.current_difference|floatformat:0|intcomma }}</span>
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center space-x-1 text-green-600 font-semibold current-diff">
+                      <i class="bi bi-arrow-down"></i>
+                      <span>{{ item.current_difference|floatformat:0|intcomma }}</span>
+                    </span>
+                  {% endif %}
                 {% else %}
-                  <span class="inline-flex items-center space-x-1 text-green-600 font-semibold">
-                    <i class="bi bi-arrow-down"></i>
-                    <span>{{ item.difference|floatformat:0|intcomma }}</span>
-                  </span>
+                  <span class="text-gray-400 current-diff">-</span>
                 {% endif %}
-              {% else %}
-                <span class="text-gray-400">-</span>
-              {% endif %}
+                {% if item.previous_amount > 0 %}
+                  {% if item.is_previous_over_budget %}
+                    <span class="hidden inline-flex items-center space-x-1 text-red-600 font-semibold previous-diff">
+                      <i class="bi bi-arrow-up"></i>
+                      <span>+{{ item.previous_difference|floatformat:0|intcomma }}</span>
+                    </span>
+                  {% else %}
+                    <span class="hidden inline-flex items-center space-x-1 text-green-600 font-semibold previous-diff">
+                      <i class="bi bi-arrow-down"></i>
+                      <span>{{ item.previous_difference|floatformat:0|intcomma }}</span>
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span class="hidden text-gray-400 previous-diff">-</span>
+                {% endif %}
+              </span>
             </td>
             <td class="px-6 py-4 text-right">
               <p class="text-gray-600">{{ item.count }}</p>
@@ -288,6 +343,109 @@
   function getItemValue(obj, key) {
     return obj[key] || 0;
   }
+
+  // Toggle comparison mode (current vs previous month)
+  let currentComparisonMode = 'current';
+  
+  function initializeComparison() {
+    switchComparisonMode('current');
+  }
+  
+  function switchComparisonMode(mode) {
+    currentComparisonMode = mode;
+    
+    console.log('Switching to mode:', mode);
+    
+    // Update button styling
+    document.querySelectorAll('.comparison-toggle-button').forEach(btn => {
+      if (btn.dataset.mode === mode) {
+        btn.classList.remove('border-gray-300', 'text-gray-700', 'bg-white');
+        btn.classList.add('border-indigo-500', 'text-white', 'bg-indigo-600');
+      } else {
+        btn.classList.remove('border-indigo-500', 'text-white', 'bg-indigo-600');
+        btn.classList.add('border-gray-300', 'text-gray-700', 'bg-white');
+      }
+    });
+    
+    // Update the overview cards and table
+    updateOverviewCardsForMode(mode);
+    updateTableForMode(mode);
+  }
+  
+  function updateOverviewCardsForMode(mode) {
+    const monthLabel = document.querySelector('.month-label');
+    const monthAmount = document.querySelector('.month-amount');
+    const monthDateElem = document.querySelector('.month-date');
+    const differenceAmount = document.querySelector('.difference-amount');
+    const differenceLabel = document.querySelector('.difference-label');
+    const differenceIcon = document.querySelector('.difference-icon');
+    
+    if (mode === 'current') {
+      monthLabel.textContent = "{{ current_month|upper }} SPENDING";
+      monthAmount.textContent = '{{ current_month_total|floatformat:0|intcomma }}';
+      monthDateElem.textContent = '{{ current_month }}';
+      
+      const currentTotal = {{ current_month_total }};
+      const average = {{ average_spending }};
+      const diff = Math.abs(currentTotal - average);
+      const isOver = currentTotal > average;
+      
+      differenceAmount.textContent = diff.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      differenceLabel.textContent = isOver ? 'Over average' : 'Under average';
+      differenceIcon.className = isOver ? 'bg-red-100 rounded-full p-3' : 'bg-green-100 rounded-full p-3';
+      differenceIcon.innerHTML = isOver ? '<i class="bi bi-arrow-up text-red-600 text-2xl"></i>' : '<i class="bi bi-arrow-down text-green-600 text-2xl"></i>';
+    } else {
+      monthLabel.textContent = "{{ previous_month|upper }} SPENDING";
+      monthAmount.textContent = '{{ previous_month_total|floatformat:0|intcomma }}';
+      monthDateElem.textContent = '{{ previous_month }}';
+      
+      const previousTotal = {{ previous_month_total }};
+      const average = {{ average_spending }};
+      const diff = Math.abs(previousTotal - average);
+      const isOver = previousTotal > average;
+      
+      differenceAmount.textContent = diff.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      differenceLabel.textContent = isOver ? 'Over average' : 'Under average';
+      differenceIcon.className = isOver ? 'bg-red-100 rounded-full p-3' : 'bg-green-100 rounded-full p-3';
+      differenceIcon.innerHTML = isOver ? '<i class="bi bi-arrow-up text-red-600 text-2xl"></i>' : '<i class="bi bi-arrow-down text-green-600 text-2xl"></i>';
+    }
+  }
+  
+  function updateTableForMode(mode) {
+    // Update month column visibility
+    document.querySelectorAll('td.month-cell').forEach(td => {
+      if (td.dataset.mode === mode) {
+        td.classList.remove('hidden');
+      } else {
+        td.classList.add('hidden');
+      }
+    });
+    
+    // Update row colors based on mode
+    document.querySelectorAll('tr.category-row').forEach(row => {
+      row.classList.remove('hover:bg-red-50', 'hover:bg-green-50', 'hover:bg-gray-50');
+      
+      const isOver = mode === 'current' 
+        ? row.dataset.currentOver === 'True'
+        : row.dataset.previousOver === 'True';
+      const amount = mode === 'current'
+        ? parseFloat(row.dataset.current)
+        : parseFloat(row.dataset.previous);
+      
+      if (isOver) {
+        row.classList.add('hover:bg-red-50');
+      } else if (amount > 0) {
+        row.classList.add('hover:bg-green-50');
+      } else {
+        row.classList.add('hover:bg-gray-50');
+      }
+    });
+  }
+
+  // Initialize comparison on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeComparison();
+  });
 </script>
 
 <!-- Template filters for dict access -->

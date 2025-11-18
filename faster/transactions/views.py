@@ -777,10 +777,16 @@ def monthly_budget(request):
         if category_stats[category]["min"] == float("inf"):
             category_stats[category]["min"] = 0
 
-    # Get current month
+    # Get current month and previous month
     today = datetime.date.today()
     current_month = today.strftime("%Y-%m")
     current_month_spending = monthly_by_category.get(current_month, {})
+
+    # Calculate previous month
+    first_day_current = datetime.date(today.year, today.month, 1)
+    last_day_previous = first_day_current - datetime.timedelta(days=1)
+    previous_month = last_day_previous.strftime("%Y-%m")
+    previous_month_spending = monthly_by_category.get(previous_month, {})
 
     # Prepare data for chart - show last 12 months
     all_months = sorted(
@@ -819,27 +825,41 @@ def monthly_budget(request):
     num_months = len(monthly_by_category) if monthly_by_category else 1
     average_spending = total_all_months / num_months if num_months > 0 else 0
 
-    # Prepare category rows with pre-calculated comparison values
+    # Prepare category rows with pre-calculated comparison values for BOTH current and previous month
     category_rows = []
     for category, stats in sorted(
         category_stats.items(), key=lambda x: x[1]["average"], reverse=True
     ):
         current_amount = current_month_spending.get(category, 0)
-        is_over_budget = (
+        previous_amount = previous_month_spending.get(category, 0)
+
+        is_current_over_budget = (
             current_amount > stats["average"] if stats["average"] > 0 else False
         )
-        difference = abs(current_amount - stats["average"]) if current_amount > 0 else 0
+        is_previous_over_budget = (
+            previous_amount > stats["average"] if stats["average"] > 0 else False
+        )
+
+        current_difference = (
+            abs(current_amount - stats["average"]) if current_amount > 0 else 0
+        )
+        previous_difference = (
+            abs(previous_amount - stats["average"]) if previous_amount > 0 else 0
+        )
 
         category_rows.append(
             {
                 "category": category,
                 "current_amount": current_amount,
+                "previous_amount": previous_amount,
                 "average": stats["average"],
                 "min": stats["min"],
                 "max": stats["max"],
                 "count": stats["count"],
-                "is_over_budget": is_over_budget,
-                "difference": difference,
+                "is_current_over_budget": is_current_over_budget,
+                "is_previous_over_budget": is_previous_over_budget,
+                "current_difference": current_difference,
+                "previous_difference": previous_difference,
             }
         )
 
@@ -850,7 +870,9 @@ def monthly_budget(request):
         "dashboard/monthly_budget.html",
         {
             "current_month": current_month,
+            "previous_month": previous_month,
             "current_month_total": current_month_total,
+            "previous_month_total": sum(previous_month_spending.values()),
             "average_spending": average_spending,
             "all_months": all_months,
             "category_stats": dict(
@@ -861,6 +883,11 @@ def monthly_budget(request):
             "category_rows": category_rows,
             "current_month_spending": dict(
                 sorted(current_month_spending.items(), key=lambda x: x[1], reverse=True)
+            ),
+            "previous_month_spending": dict(
+                sorted(
+                    previous_month_spending.items(), key=lambda x: x[1], reverse=True
+                )
             ),
             "chart_data": json.dumps(chart_data),
             "files": files,
@@ -1835,4 +1862,113 @@ def api_update_excluded_categories(request):
         )
 
     except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_budget_comparison(request):
+    """API endpoint to get budget data for a specific month"""
+    import json
+    from collections import defaultdict
+    from datetime import datetime
+
+    from django.utils.dateparse import parse_date as django_parse_date
+
+    try:
+        year = request.GET.get("year")
+        month = request.GET.get("month")
+
+        if not year or not month:
+            return JsonResponse(
+                {"success": False, "error": "Year and month parameters required"},
+                status=400,
+            )
+
+        year = int(year)
+        month = int(month)
+
+        # Get all transactions
+        transactions = Transaction.objects.all()
+
+        # Helper function to parse dates
+        def parse_date(date_str):
+            for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y"):
+                try:
+                    return datetime.strptime(date_str, fmt).date()
+                except:
+                    continue
+            return None
+
+        # Filter transactions for the selected month
+        month_transactions = []
+        for t in transactions:
+            date_obj = parse_date(t.date)
+            if date_obj and date_obj.year == year and date_obj.month == month:
+                if t.amount < 0:  # Only negative (spending)
+                    month_transactions.append(t)
+
+        # Calculate month total
+        month_total = sum(abs(t.amount) for t in month_transactions)
+
+        # Group by category
+        category_totals = defaultdict(float)
+        for t in month_transactions:
+            category_totals[t.category or "Uncategorized"] += abs(t.amount)
+
+        # Calculate average spending across all months (excluding the selected month)
+        all_transactions = transactions.filter(amount__lt=0)
+        month_totals_by_month = defaultdict(float)
+        month_count = defaultdict(int)
+
+        for t in all_transactions:
+            date_obj = parse_date(t.date)
+            if date_obj:
+                month_key = f"{date_obj.year}-{date_obj.month:02d}"
+                month_totals_by_month[month_key] += abs(t.amount)
+                month_count[month_key] += 1
+
+        # Calculate average
+        if month_totals_by_month:
+            average_spending = sum(month_totals_by_month.values()) / len(
+                month_totals_by_month
+            )
+        else:
+            average_spending = 0
+
+        # Prepare category rows
+        category_rows = []
+        for category, amount in sorted(
+            category_totals.items(), key=lambda x: x[1], reverse=True
+        ):
+            category_rows.append(
+                {
+                    "category": category,
+                    "month_amount": float(amount),
+                    "average": average_spending / len(category_totals)
+                    if category_totals
+                    else 0,
+                }
+            )
+
+        # Get primary currency
+        primary_currency = "CHF"
+        first_transaction = transactions.first()
+        if first_transaction and first_transaction.currency:
+            primary_currency = first_transaction.currency
+
+        return JsonResponse(
+            {
+                "success": True,
+                "month_total": month_total,
+                "average_spending": average_spending,
+                "category_rows": category_rows,
+                "primary_currency": primary_currency,
+            }
+        )
+
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)}, status=500)

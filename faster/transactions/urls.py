@@ -69,4 +69,9 @@ urlpatterns = [
         views.api_update_excluded_categories,
         name="api_update_excluded_categories",
     ),
+    path(
+        "api/budget-comparison/",
+        views.api_budget_comparison,
+        name="api_budget_comparison",
+    ),
 ]

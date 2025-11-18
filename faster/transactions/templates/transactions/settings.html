@@ -9,7 +9,7 @@
     Settings
   </h1>
   <p class="text-gray-600">
-    Manage your application settings and AI categorization preferences
+    Manage your application settings and categorization preferences
   </p>
 </div>
 
@@ -22,7 +22,7 @@
     </button>
     <button class="settings-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition"
             data-tab="categorization">
-      <i class="bi bi-robot mr-2"></i>AI Categorization
+      <i class="bi bi-robot mr-2"></i>Categorization
     </button>
     <button class="settings-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition"
             data-tab="data">
@@ -147,19 +147,34 @@
           </p>
           
           <div class="space-y-3">
-            <div class="flex gap-2">
+            <!-- Search by Merchant, Category, or Amount -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
               <input 
                 type="text" 
                 id="merchant-search" 
                 placeholder="Search by merchant name..." 
-                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
-              <button 
-                id="search-merchant-btn"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition"
+              <input 
+                type="text" 
+                id="category-search" 
+                placeholder="Search by category..." 
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
-                Search
-              </button>
+              <div class="flex gap-2">
+                <input 
+                  type="text" 
+                  id="amount-search" 
+                  placeholder="Search by amount (e.g., 50 or >100)" 
+                  class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                <button 
+                  id="search-merchant-btn"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition"
+                >
+                  Search
+                </button>
+              </div>
             </div>
             
             <div id="search-results" class="hidden space-y-2">
@@ -354,6 +369,94 @@
 </style>
 
 <script>
+  // Get all categories from Django template context as a global variable
+  const allCategoriesJson = '{{ all_categories|safe|escapejs }}';
+  let globalCategoryOptions = [];
+  try {
+    // Parse Django list representation to JavaScript array
+    globalCategoryOptions = allCategoriesJson
+      .replace(/^[\[\s]+/, '')  // Remove opening bracket and spaces
+      .replace(/[\]\s]+$/, '')  // Remove closing bracket and spaces
+      .split(',')
+      .map(cat => cat.trim().replace(/^['"]|['"]$/g, ''))  // Remove quotes
+      .filter(cat => cat.length > 0);
+  } catch (e) {
+    console.warn('Failed to parse categories, using fallback');
+  }
+  
+  // If parsing failed, include fallback categories
+  if (globalCategoryOptions.length === 0) {
+    globalCategoryOptions = [
+      'Groceries', 'Dining', 'Shopping', 'Transport', 'Travel',
+      'Health', 'Utilities', 'Leisure', 'Car', 'Insurance',
+      'Fee', 'Salary', 'Refund', 'Investment', 'Work', 'Donation',
+      'Uncounted', 'Bank Transfer', 'Vault', 'Other'
+    ];
+  }
+
+  // Global variable to store search results and pagination
+  let allSearchResults = [];
+  let currentResultsPage = 1;
+  const resultsPerPage = 10;
+
+  // Toast notification system
+  function showToast(message, type = 'info', duration = 3000) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.id = 'toast-container';
+      toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;';
+      document.body.appendChild(toastContainer);
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ⓘ';
+    
+    toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn pointer-events-auto`;
+    toast.style.cssText = `animation: slideIn 0.3s ease-out; min-width: 250px;`;
+    toast.innerHTML = `
+      <span style="font-size: 18px; font-weight: bold;">${icon}</span>
+      <span>${message}</span>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Remove toast after duration
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
+  // Add CSS animations for toast
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
   // Tab switching
   document.querySelectorAll('.settings-tab').forEach(tab => {
     tab.addEventListener('click', function() {
@@ -650,111 +753,220 @@
         }
       });
       
+      // Add event listeners for new search fields
+      const categorySearch = document.getElementById('category-search');
+      const amountSearch = document.getElementById('amount-search');
+      
+      if (categorySearch) {
+        categorySearch.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            searchMerchants();
+          }
+        });
+      }
+      
+      if (amountSearch) {
+        amountSearch.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            searchMerchants();
+          }
+        });
+      }
+      
       hideSearchBtn.addEventListener('click', function() {
         searchResults.classList.add('hidden');
         merchantSearch.value = '';
+        document.getElementById('category-search').value = '';
+        document.getElementById('amount-search').value = '';
       });
     }
   });
   
   function searchMerchants() {
-    const searchTerm = document.getElementById('merchant-search').value.trim();
-    if (!searchTerm) {
-      alert('Please enter a merchant name to search');
+    const merchantTerm = document.getElementById('merchant-search').value.trim().toLowerCase();
+    const categoryTerm = document.getElementById('category-search').value.trim().toLowerCase();
+    const amountTerm = document.getElementById('amount-search').value.trim();
+    
+    if (!merchantTerm && !categoryTerm && !amountTerm) {
+      showToast('Please enter at least one search criteria: merchant name, category, or amount', 'error');
       return;
     }
     
-    fetch(`/api/transactions/?category=${encodeURIComponent(searchTerm)}`)
+    // Parse amount search (supports >, <, >=, <=, =, or just a number)
+    let amountFilter = null;
+    if (amountTerm) {
+      const match = amountTerm.match(/^([><=]*)([\d.]+)$/);
+      if (match) {
+        const operator = match[1] || '=';
+        const value = parseFloat(match[2]);
+        amountFilter = { operator, value };
+      } else {
+        showToast('Invalid amount format. Use: 50, >100, <200, >=150, <=300, or =75', 'error');
+        return;
+      }
+    }
+    
+    fetch(`/api/transactions/`)
       .then(response => response.json())
       .then(data => {
-        const transactions = data.transactions.filter(t => 
-          t.booking_text.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        let transactions = data.transactions;
         
-        if (transactions.length === 0) {
-          document.getElementById('transactions-list').innerHTML = '<p class="text-gray-500">No transactions found with that merchant.</p>';
-        } else {
-          let html = '<div class="space-y-2">';
-          transactions.slice(0, 10).forEach(t => {
-            const categoryOptions = [
-              'Groceries', 'Dining', 'Shopping', 'Transport', 'Travel',
-              'Health', 'Utilities', 'Leisure', 'Car', 'Insurance',
-              'Fee', 'Salary', 'Refund', 'Investment', 'Work', 'Donation',
-              'Uncounted', 'Bank Transfer', 'Vault', 'Other'
-            ];
-            
-            html += `
-              <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1">
-                    <p class="font-medium text-gray-900 text-sm">${t.booking_text}</p>
-                    <p class="text-xs text-gray-500">${t.date} • ${t.amount} ${t.currency}</p>
-                  </div>
-                  <span class="text-xs font-semibold px-2 py-1 rounded" id="category-badge-${t.id}"></span>
-                </div>
-                <div class="flex gap-2">
-                  <select class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" 
-                          data-transaction-id="${t.id}" 
-                          data-merchant="${t.booking_text}">
-                    <option value="">-- Select Category --</option>
-                    ${categoryOptions.map(cat => `<option value="${cat}" ${t.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
-                  </select>
-                  <button class="apply-category-btn px-3 py-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium transition" 
-                          data-transaction-id="${t.id}" 
-                          data-merchant="${t.booking_text}">
-                    Apply
-                  </button>
-                </div>
-              </div>
-            `;
-          });
-          html += '</div>';
-          
-          if (transactions.length > 10) {
-            html += `<p class="text-xs text-gray-500 mt-3">Showing 10 of ${transactions.length} transactions</p>`;
-          }
-          
-          document.getElementById('transactions-list').innerHTML = html;
-          
-          // Set category badge styles
-          transactions.slice(0, 10).forEach(t => {
-            const badge = document.getElementById(`category-badge-${t.id}`);
-            if (badge) {
-              let badgeClass = 'bg-indigo-200 text-indigo-800';
-              if (t.category === 'Uncounted') {
-                badgeClass = 'bg-gray-300 text-gray-800';
-              } else if (t.category === 'Bank Transfer') {
-                badgeClass = 'bg-blue-200 text-blue-800';
-              }
-              badge.className = `text-xs font-semibold px-2 py-1 rounded ${badgeClass}`;
-              badge.textContent = t.category || 'Uncategorized';
+        // Apply merchant filter
+        if (merchantTerm) {
+          transactions = transactions.filter(t => 
+            t.booking_text.toLowerCase().includes(merchantTerm)
+          );
+        }
+        
+        // Apply category filter
+        if (categoryTerm) {
+          transactions = transactions.filter(t => 
+            (t.category || '').toLowerCase().includes(categoryTerm)
+          );
+        }
+        
+        // Apply amount filter
+        if (amountFilter) {
+          const { operator, value } = amountFilter;
+          transactions = transactions.filter(t => {
+            const amount = Math.abs(parseFloat(t.amount));
+            switch (operator) {
+              case '>': return amount > value;
+              case '<': return amount < value;
+              case '>=': return amount >= value;
+              case '<=': return amount <= value;
+              case '=': return amount === value;
+              default: return true;
             }
-          });
-          
-          // Add event listeners to apply buttons
-          document.querySelectorAll('.apply-category-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-              const transactionId = this.dataset.transactionId;
-              const merchant = this.dataset.merchant;
-              const select = document.querySelector(`select[data-transaction-id="${transactionId}"]`);
-              const category = select.value;
-              
-              if (!category) {
-                alert('Please select a category');
-                return;
-              }
-              
-              applyCategoryToTransaction(transactionId, category, merchant);
-            });
           });
         }
         
-        document.getElementById('search-results').classList.remove('hidden');
+        if (transactions.length === 0) {
+          document.getElementById('transactions-list').innerHTML = '<p class="text-gray-500">No transactions found matching your criteria.</p>';
+          document.getElementById('search-results').classList.remove('hidden');
+        } else {
+          // Store all results globally for pagination
+          allSearchResults = transactions;
+          currentResultsPage = 1;
+          
+          // Display first page and show results container
+          displaySearchResultsPage();
+          document.getElementById('search-results').classList.remove('hidden');
+        }
       })
       .catch(error => {
         console.error('Error searching merchants:', error);
-        alert('Error searching merchants');
+        showToast('Error searching merchants', 'error');
       });
+  }
+  
+  function displaySearchResultsPage() {
+    const startIdx = (currentResultsPage - 1) * resultsPerPage;
+    const endIdx = startIdx + resultsPerPage;
+    const pageTransactions = allSearchResults.slice(startIdx, endIdx);
+    
+    let html = '<div class="space-y-2">';
+    pageTransactions.forEach(t => {
+      html += `
+        <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+              <p class="font-medium text-gray-900 text-sm">${t.booking_text}</p>
+              <p class="text-xs text-gray-500">${t.date} • ${t.amount} ${t.currency}</p>
+            </div>
+            <span class="text-xs font-semibold px-2 py-1 rounded" id="category-badge-${t.id}"></span>
+          </div>
+          <div class="flex gap-2">
+            <select class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" 
+                    data-transaction-id="${t.id}" 
+                    data-merchant="${t.booking_text}">
+              <option value="">-- Select Category --</option>
+              ${globalCategoryOptions.map(cat => `<option value="${cat}" ${t.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+            </select>
+            <button class="apply-category-btn px-3 py-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium transition" 
+                    data-transaction-id="${t.id}" 
+                    data-merchant="${t.booking_text}">
+              Apply
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    // Add pagination info and controls
+    const totalPages = Math.ceil(allSearchResults.length / resultsPerPage);
+    html += `
+      <div class="mt-4 flex items-center justify-between bg-gray-100 p-3 rounded-lg">
+        <span class="text-sm text-gray-600">Showing ${startIdx + 1}-${Math.min(endIdx, allSearchResults.length)} of ${allSearchResults.length} transactions</span>
+        <div class="flex gap-2">
+          <button class="pagination-prev px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition ${currentResultsPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                  onclick="previousResultsPage()" 
+                  ${currentResultsPage === 1 ? 'disabled' : ''}>
+            ← Previous
+          </button>
+          <span class="px-3 py-1 text-sm font-medium">${currentResultsPage} / ${totalPages}</span>
+          <button class="pagination-next px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition ${currentResultsPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" 
+                  onclick="nextResultsPage()" 
+                  ${currentResultsPage === totalPages ? 'disabled' : ''}>
+            Next →
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('transactions-list').innerHTML = html;
+    
+    // Set category badge styles
+    pageTransactions.forEach(t => {
+      const badge = document.getElementById(`category-badge-${t.id}`);
+      if (badge) {
+        let badgeClass = 'bg-indigo-200 text-indigo-800';
+        if (t.category === 'Uncounted') {
+          badgeClass = 'bg-gray-300 text-gray-800';
+        } else if (t.category === 'Bank Transfer') {
+          badgeClass = 'bg-blue-200 text-blue-800';
+        }
+        badge.className = `text-xs font-semibold px-2 py-1 rounded ${badgeClass}`;
+        badge.textContent = t.category || 'Uncategorized';
+      }
+    });
+    
+    // Add event listeners to apply buttons
+    document.querySelectorAll('.apply-category-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const transactionId = this.dataset.transactionId;
+        const merchant = this.dataset.merchant;
+        const select = document.querySelector(`select[data-transaction-id="${transactionId}"]`);
+        const category = select.value;
+        
+        if (!category) {
+          showToast('Please select a category', 'error');
+          return;
+        }
+        
+        applyCategoryToTransaction(transactionId, category, merchant);
+      });
+    });
+  }
+  
+  function previousResultsPage() {
+    if (currentResultsPage > 1) {
+      currentResultsPage--;
+      displaySearchResultsPage();
+      // Scroll to top of results
+      document.getElementById('transactions-list').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+  
+  function nextResultsPage() {
+    const totalPages = Math.ceil(allSearchResults.length / resultsPerPage);
+    if (currentResultsPage < totalPages) {
+      currentResultsPage++;
+      displaySearchResultsPage();
+      // Scroll to top of results
+      document.getElementById('transactions-list').scrollIntoView({ behavior: 'smooth' });
+    }
   }
   
   function applyCategoryToTransaction(transactionId, category, merchant) {
@@ -774,18 +986,62 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          alert(`Category "${category}" applied to this transaction and all ${merchant} transactions!`);
-          // Reload search results
-          searchMerchants();
+          showToast(`Category "${category}" applied to all ${merchant} transactions!`, 'success');
+          // Refresh the current page without resetting pagination
+          const merchantTerm = document.getElementById('merchant-search').value.trim().toLowerCase();
+          const categoryTerm = document.getElementById('category-search').value.trim().toLowerCase();
+          const amountTerm = document.getElementById('amount-search').value.trim();
+          
+          // Re-fetch and re-filter transactions
+          fetch(`/api/transactions/`)
+            .then(response => response.json())
+            .then(data => {
+              let transactions = data.transactions;
+              
+              // Apply filters
+              if (merchantTerm) {
+                transactions = transactions.filter(t => 
+                  t.booking_text.toLowerCase().includes(merchantTerm)
+                );
+              }
+              if (categoryTerm) {
+                transactions = transactions.filter(t => 
+                  (t.category || '').toLowerCase().includes(categoryTerm)
+                );
+              }
+              if (amountTerm) {
+                const match = amountTerm.match(/^([><=]*)([\d.]+)$/);
+                if (match) {
+                  const operator = match[1] || '=';
+                  const value = parseFloat(match[2]);
+                  transactions = transactions.filter(t => {
+                    const amount = Math.abs(parseFloat(t.amount));
+                    switch (operator) {
+                      case '>': return amount > value;
+                      case '<': return amount < value;
+                      case '>=': return amount >= value;
+                      case '<=': return amount <= value;
+                      case '=': return amount === value;
+                      default: return true;
+                    }
+                  });
+                }
+              }
+              
+              // Update results while maintaining current page
+              allSearchResults = transactions;
+              displaySearchResultsPage();
+            });
+          
           // Reload categorization stats
           loadCategorizationStats();
         } else {
-          alert('Error updating category: ' + data.error);
+          showToast('Error updating category: ' + data.error, 'error');
         }
       })
       .catch(error => {
         console.error('Error updating category:', error);
-        alert('Error updating category');
+        showToast('Error updating category', 'error');
       });
   }
 
@@ -815,12 +1071,12 @@
           }
         }, 300);
       } else {
-        alert('Error deleting file: ' + (data.error || 'Unknown error'));
+        showToast('Error deleting file: ' + (data.error || 'Unknown error'), 'error');
       }
     })
     .catch(error => {
       console.error('Error deleting file:', error);
-      alert('Error deleting file: ' + error.message);
+      showToast('Error deleting file: ' + error.message, 'error');
     });
   }
 
