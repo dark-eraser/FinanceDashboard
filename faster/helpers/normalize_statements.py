@@ -163,6 +163,85 @@ def parse_zkb(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def parse_ubs(df: pd.DataFrame) -> pd.DataFrame:
+    """Parse UBS semicolon CSV into the canonical output schema.
+
+    UBS column mappings:
+    - Abschlussdatum: posting/settlement date (not directly used)
+    - Buchungsdatum: booking date (not directly used)
+    - Valutadatum: value date (used for value_date)
+    - Währung: currency (CHF)
+    - Belastung: debit/charge amount (negative)
+    - Gutschrift: credit/income amount (positive)
+    - Beschreibung1, Beschreibung2, Beschreibung3: transaction descriptions
+    """
+    if df is None or df.empty:
+        return pd.DataFrame(columns=OUT_COLS)
+
+    out = pd.DataFrame()
+
+    # value_date: use Valutadatum (value date)
+    # UBS dates are in ISO format (YYYY-MM-DD), so use dayfirst=False
+    if "Valutadatum" in df.columns:
+        out["value_date"] = df["Valutadatum"].apply(
+            lambda v: _parse_date(v, dayfirst=False)
+        )
+    else:
+        out["value_date"] = None
+
+    # description: combine Beschreibung1, Beschreibung2, Beschreibung3
+    desc_parts = []
+    for desc_col in ["Beschreibung1", "Beschreibung2", "Beschreibung3"]:
+        if desc_col in df.columns:
+            desc_parts.append(df[desc_col].astype(str))
+
+    if desc_parts:
+        out["description"] = (
+            df[["Beschreibung1", "Beschreibung2", "Beschreibung3"]]
+            .fillna("")
+            .apply(
+                lambda row: " ".join([str(v).strip() for v in row if str(v).strip()]),
+                axis=1,
+            )
+            if len(desc_parts) == 3
+            else desc_parts[0].astype(str)
+        )
+    else:
+        out["description"] = ""
+
+    out["type"] = None
+
+    # amount: prefer Gutschrift (credit) if present and non-zero, else Belastung (debit)
+    # Note: Both Belastung and Gutschrift already include their proper signs in the CSV
+    def compute_amount_from_ubs(rec):
+        belastung = None
+        gutschrift = None
+
+        if "Belastung" in rec.index or "Belastung" in rec:
+            belastung = _to_float(rec.get("Belastung"))
+        if "Gutschrift" in rec.index or "Gutschrift" in rec:
+            gutschrift = _to_float(rec.get("Gutschrift"))
+
+        # Return whichever is non-zero/non-None (prefer credit/Gutschrift if both present)
+        if gutschrift and gutschrift != 0:
+            return gutschrift
+        if belastung and belastung != 0:
+            return belastung
+        return None
+
+    out["amount"] = df.apply(compute_amount_from_ubs, axis=1)
+
+    # currency: extract from Währung column or default to CHF
+    if "Währung" in df.columns:
+        out["currency"] = df["Währung"].fillna("CHF")
+    else:
+        out["currency"] = "CHF"
+
+    out["fee"] = None
+    out["reference"] = None
+    return out
+
+
 def _parse_date(v, dayfirst=False):
     if pd.isna(v):
         return None
@@ -328,6 +407,7 @@ def _extract_reference_from_desc(desc: str) -> str:
 PARSERS = [
     ("revolut", parse_revolut),
     ("zkb", parse_zkb),
+    ("ubs", parse_ubs),
 ]
 
 
@@ -381,6 +461,9 @@ def detect_and_parse(path: Path) -> pd.DataFrame:
         or ("Date" in cols and ("Debit CHF" in cols or "Credit CHF" in cols))
     ):
         return parse_zkb(df)
+    # UBS detection: look for distinctive UBS columns
+    if "Valutadatum" in cols and ("Belastung" in cols or "Gutschrift" in cols):
+        return parse_ubs(df)
 
     # fallback: try to guess by presence of Amount+Currency
     if "Amount" in cols and "Currency" in cols:

@@ -32,9 +32,21 @@ def settings_view(request):
     import json
     import sys
 
-    print(f"DEBUG: settings_view called, method={request.method}", file=sys.stderr, flush=True)
-    print(f"DEBUG: request.FILES keys: {list(request.FILES.keys())}", file=sys.stderr, flush=True)
-    print(f"DEBUG: request.POST keys: {list(request.POST.keys())}", file=sys.stderr, flush=True)
+    print(
+        f"DEBUG: settings_view called, method={request.method}",
+        file=sys.stderr,
+        flush=True,
+    )
+    print(
+        f"DEBUG: request.FILES keys: {list(request.FILES.keys())}",
+        file=sys.stderr,
+        flush=True,
+    )
+    print(
+        f"DEBUG: request.POST keys: {list(request.POST.keys())}",
+        file=sys.stderr,
+        flush=True,
+    )
 
     from .models import DashboardSettings, Transaction, UploadedFile
 
@@ -137,6 +149,7 @@ def settings_view(request):
                         row.get("Date")
                         or row.get("value_date")
                         or row.get("Started Date")
+                        or row.get("Valutadatum")  # UBS format
                         or ""
                     )
 
@@ -147,6 +160,20 @@ def settings_view(request):
                         or row.get("Description")
                         or ""
                     )
+
+                    # For UBS, combine all description fields
+                    if not booking_text:
+                        desc_parts = []
+                        for desc_col in [
+                            "Beschreibung1",
+                            "Beschreibung2",
+                            "Beschreibung3",
+                        ]:
+                            if desc_col in row and pd.notna(row[desc_col]):
+                                desc_val = str(row[desc_col]).strip()
+                                if desc_val:
+                                    desc_parts.append(desc_val)
+                        booking_text = " ".join(desc_parts)
 
                     # Extract category
                     category = row.get("Category") or ""
@@ -160,6 +187,12 @@ def settings_view(request):
                         amount = -abs(float(row["Debit CHF"]))
                     elif "Credit CHF" in row and pd.notna(row["Credit CHF"]):
                         amount = abs(float(row["Credit CHF"]))
+                    elif "Belastung" in row and pd.notna(row["Belastung"]):
+                        # UBS: Belastung is a debit/charge (negative)
+                        amount = float(row["Belastung"])
+                    elif "Gutschrift" in row and pd.notna(row["Gutschrift"]):
+                        # UBS: Gutschrift is a credit/income (positive)
+                        amount = float(row["Gutschrift"])
                     elif "amount" in row and pd.notna(row["amount"]):
                         amount = float(row["amount"])
                     elif "Amount" in row and pd.notna(row["Amount"]):
@@ -170,6 +203,7 @@ def settings_view(request):
                         row.get("curr")
                         or row.get("currency")
                         or row.get("Currency")
+                        or row.get("Währung")  # UBS format
                         or ""
                     )
 
@@ -231,6 +265,12 @@ def settings_view(request):
                 all_currencies = sorted(
                     set(t.currency for t in Transaction.objects.all() if t.currency)
                 )
+
+                # Automatically select the newly uploaded file and save to session
+                selected_file_ids = request.session.get("selected_file_ids", [])
+                if uploaded_file.id not in selected_file_ids:
+                    selected_file_ids.append(uploaded_file.id)
+                    request.session["selected_file_ids"] = selected_file_ids
 
         except Exception as e:
             import traceback
@@ -1663,23 +1703,26 @@ def dashboard_data_ajax(request):
 def api_categorization_stats(request):
     """API endpoint to get categorization statistics"""
     import sys
+
     print("=" * 80, file=sys.stderr)
     print("DEBUG: api_categorization_stats called", file=sys.stderr)
     sys.stderr.flush()
-    
+
     try:
         print("DEBUG: Importing TransactionCategorizationService", file=sys.stderr)
         sys.stderr.flush()
         from .categorization_service import TransactionCategorizationService
 
-        print("DEBUG: Creating TransactionCategorizationService instance", file=sys.stderr)
+        print(
+            "DEBUG: Creating TransactionCategorizationService instance", file=sys.stderr
+        )
         sys.stderr.flush()
         categorization_service = TransactionCategorizationService()
 
         print("DEBUG: Calling get_categorization_stats()", file=sys.stderr)
         sys.stderr.flush()
         stats = categorization_service.get_categorization_stats()
-        
+
         print(f"DEBUG: Stats retrieved successfully: {stats}", file=sys.stderr)
         sys.stderr.flush()
         return JsonResponse({"success": True, "stats": stats})
