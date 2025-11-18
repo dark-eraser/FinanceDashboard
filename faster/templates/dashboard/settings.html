@@ -1,792 +1,1159 @@
-{% extends "base.html" %} {% block content %}
-<!-- Header -->
+{% extends "base.html" %}
+{% load humanize %}
+{% csrf_token %}
+
+{% block content %}
 <div class="mb-8">
   <h1 class="text-4xl font-bold text-gray-900 mb-2">
-    <i class="bi bi-gear-fill text-indigo-600"></i>
-    Settings & Data Management
+    <i class="bi bi-gear text-indigo-600"></i>
+    Settings
   </h1>
   <p class="text-gray-600">
-    Upload bank statements, manage filters, and control your financial data
+    Manage your application settings and categorization preferences
   </p>
 </div>
 
-<!-- Success/Error Messages -->
-{% if success %}
-<div
-  class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg shadow-sm"
->
-  <div class="flex items-center">
-    <i class="bi bi-check-circle-fill text-green-500 text-xl mr-3"></i>
-    <p class="text-green-800 font-medium">{{ success }}</p>
+<!-- Tab Navigation -->
+<div class="mb-8">
+  <div class="flex space-x-1 border-b border-gray-200 bg-white rounded-lg">
+    <button class="settings-tab px-6 py-3 font-medium border-b-2 border-indigo-600 text-indigo-600 transition"
+            data-tab="upload">
+      <i class="bi bi-cloud-upload mr-2"></i>Upload Files
+    </button>
+    <button class="settings-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition"
+            data-tab="categorization">
+      <i class="bi bi-robot mr-2"></i>Categorization
+    </button>
+    <button class="settings-tab px-6 py-3 font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 transition"
+            data-tab="data">
+      <i class="bi bi-database mr-2"></i>Data Management
+    </button>
   </div>
 </div>
-{% endif %} {% if error %}
-<div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg shadow-sm">
-  <div class="flex items-center">
-    <i class="bi bi-exclamation-circle-fill text-red-500 text-xl mr-3"></i>
-    <p class="text-red-800 font-medium">{{ error }}</p>
-  </div>
-</div>
-{% endif %}
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <!-- Left Column: Upload & Filters -->
+<!-- Tab 1: Upload Files -->
+<div id="upload-tab" class="settings-content">
+  <div class="bg-white rounded-xl shadow-md overflow-hidden">
+    <div class="bg-gradient-to-r from-indigo-500 to-blue-500 px-6 py-4">
+      <h2 class="text-xl font-bold text-white flex items-center">
+        <i class="bi bi-cloud-upload mr-2"></i>
+        Upload Bank Statements
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-8 text-center cursor-pointer hover:bg-blue-100 transition"
+           id="dropZone">
+        <i class="bi bi-file-earmark-arrow-up text-4xl text-blue-500 mb-2"></i>
+        <p class="text-gray-700 font-medium">Drop CSV files here or click to select</p>
+        <p class="text-sm text-gray-500 mt-1">Supported formats: ZKB, Revolut</p>
+        <input type="file" id="fileInput" multiple accept=".csv" class="hidden">
+      </div>
+      <div id="uploadStatus" class="mt-4"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 2: AI Categorization -->
+<div id="categorization-tab" class="settings-content hidden">
   <div class="space-y-6">
-    <!-- Upload Section -->
-    <div
-      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
-    >
-      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-4">
+    <!-- Statistics Section -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4">
         <h2 class="text-xl font-bold text-white flex items-center">
-          <i class="bi bi-cloud-upload-fill mr-2"></i>
-          Upload Statement
+          <i class="bi bi-bar-chart mr-2"></i>
+          Categorization Statistics
         </h2>
       </div>
       <div class="p-6">
-        <form method="post" enctype="multipart/form-data" class="space-y-4">
-          {% csrf_token %}
-          <div>
-            <label
-              for="csv_file"
-              class="block text-sm font-semibold text-gray-700 mb-2"
-            >
-              Select CSV File
-            </label>
-            <div class="relative">
-              <input
-                type="file"
-                class="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                id="csv_file"
-                name="csv_file"
-                accept=".csv"
-                required
-              />
-            </div>
-            <p class="mt-2 text-xs text-gray-500 flex items-center">
-              <i class="bi bi-info-circle mr-1"></i>
-              Supports ZKB & Revolut bank statements
-            </p>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="text-center p-4 bg-blue-50 rounded-lg">
+            <div class="text-3xl font-bold text-blue-600" id="categorization-rate">-</div>
+            <div class="text-sm text-gray-600 mt-1">Categorization Rate</div>
           </div>
-          <button
-            type="submit"
-            class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transition duration-200 flex items-center justify-center space-x-2 shadow-md"
-          >
-            <i class="bi bi-upload"></i>
-            <span>Upload Statement</span>
-          </button>
-        </form>
+          <div class="text-center p-4 bg-green-50 rounded-lg">
+            <div class="text-3xl font-bold text-green-600" id="high-confidence-count">-</div>
+            <div class="text-sm text-gray-600 mt-1">High Confidence (≥80%)</div>
+          </div>
+          <div class="text-center p-4 bg-yellow-50 rounded-lg">
+            <div class="text-3xl font-bold text-yellow-600" id="medium-confidence-count">-</div>
+            <div class="text-sm text-gray-600 mt-1">Medium Confidence (60-79%)</div>
+          </div>
+          <div class="text-center p-4 bg-purple-50 rounded-lg">
+            <div class="text-3xl font-bold text-purple-600" id="manual-corrections-count">-</div>
+            <div class="text-sm text-gray-600 mt-1">Manual Corrections</div>
+          </div>
+        </div>
+        
+        <button 
+          id="recategorize-btn"
+          class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2"
+        >
+          <i class="bi bi-arrow-clockwise"></i>
+          <span>Re-categorize Uncategorized Transactions</span>
+        </button>
+        
+        <div id="recategorize-status" class="mt-4 hidden"></div>
+        
+        <div id="categorization-progress" class="mt-4 hidden">
+          <div class="bg-gray-200 rounded-full h-2">
+            <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p class="text-sm text-gray-600 mt-2 text-center flex items-center justify-center space-x-2">
+            <i class="bi bi-hourglass-split animate-spin"></i>
+            <span>Processing transactions...</span>
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Filters Section -->
-    <div
-      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
-    >
-      <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+    <!-- Low Confidence Transactions Section -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
         <h2 class="text-xl font-bold text-white flex items-center">
-          <i class="bi bi-funnel-fill mr-2"></i>
-          Data Filters
+          <i class="bi bi-exclamation-triangle mr-2"></i>
+          Low Confidence Predictions
         </h2>
+        <p class="text-orange-100 text-sm mt-1">Transactions that may need manual review (sorted by confidence, lowest first)</p>
       </div>
       <div class="p-6">
-        <form method="post" class="space-y-6">
-          {% csrf_token %}
-
-          <!-- Source Files Filter -->
-          <div>
-            <h3
-              class="text-sm font-semibold text-gray-700 mb-2 flex items-center"
-            >
-              <i class="bi bi-file-earmark-text mr-2 text-green-600"></i>
-              Source Files
-            </h3>
-            <p class="text-xs text-gray-500 mb-3">
-              Select files to include in analysis
-            </p>
-            <div class="space-y-2 max-h-48 overflow-y-auto pr-2">
-              {% if files %}
-                {% for file in files %}
-                  <label
-                    class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200"
-                  >
-                    <input
-                      type="checkbox"
-                      name="file"
-                      value="{{ file.id }}"
-                      class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                      {% if file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
-                    />
-                    <span class="ml-3 text-sm">
-                      <span class="font-medium text-gray-900">{{ file.name }}</span>
-                      <span class="text-gray-500 block text-xs"
-                        >{{ file.uploaded_at|date:"M d, Y H:i" }}</span
-                      >
-                    </span>
-                  </label>
-                {% endfor %}
-              {% else %}
-                <p class="text-sm text-gray-500 italic text-center py-4">
-                  No files uploaded yet
-                </p>
-              {% endif %}
-            </div>
+        <button 
+          id="view-low-confidence-btn"
+          class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2 mb-4"
+        >
+          <i class="bi bi-eye"></i>
+          <span id="low-confidence-btn-text">Load Low Confidence Transactions</span>
+        </button>
+        
+        <div id="low-confidence-container" class="hidden space-y-4">
+          <div id="low-confidence-transactions">
+            <!-- Will be populated by JavaScript -->
           </div>
-
-          <!-- Currency Filter -->
-          <!-- Currency Filter -->
-          <div>
-            <h3
-              class="text-sm font-semibold text-gray-700 mb-2 flex items-center"
-            >
-              <i class="bi bi-currency-exchange mr-2 text-green-600"></i>
-              Currencies
-            </h3>
-            <p class="text-xs text-gray-500 mb-3">
-              Select currencies to include
-            </p>
-            <div class="flex flex-wrap gap-2">
-              {% if all_currencies %} {% for currency in all_currencies %}
-              <label
-                class="inline-flex items-center px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200"
-              >
-                <input
-                  type="checkbox"
-                  name="currency"
-                  value="{{ currency }}"
-                  class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                  {%
-                  if
-                  currency
-                  in
-                  selected_currencies
-                  %}checked{%
-                  endif
-                  %}
-                />
-                <span class="ml-2 text-sm font-semibold text-gray-700"
-                  >{{ currency }}</span
-                >
-              </label>
-              {% endfor %} {% else %}
-              <p class="text-sm text-gray-500 italic">No currencies found</p>
-              {% endif %}
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition duration-200 flex items-center justify-center space-x-2 shadow-md"
+          <button 
+            id="hide-low-confidence-btn"
+            class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
           >
-            <i class="bi bi-check-circle-fill"></i>
-            <span>Apply Filters</span>
+            Hide Low Confidence Transactions
           </button>
-          <p class="text-xs text-gray-500 text-center">
-            Filters apply to all analytics views
+        </div>
+
+        <!-- Manual Categorization Section -->
+        <div class="mt-6 border-t pt-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="bi bi-hand-index mr-2"></i>
+            Manual Categorization
+          </h3>
+          <p class="text-sm text-gray-600 mb-4">
+            Manually categorize transactions. When you categorize a transaction, all transactions with the same merchant will automatically get the same category.
           </p>
-        </form>
+          
+          <div class="space-y-3">
+            <!-- Search by Merchant, Category, or Amount -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <input 
+                type="text" 
+                id="merchant-search" 
+                placeholder="Search by merchant name..." 
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+              <input 
+                type="text" 
+                id="category-search" 
+                placeholder="Search by category..." 
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+              <div class="flex gap-2">
+                <input 
+                  type="text" 
+                  id="amount-search" 
+                  placeholder="Search by amount (e.g., 50 or >100)" 
+                  class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                <button 
+                  id="search-merchant-btn"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+            
+            <div id="search-results" class="hidden space-y-2">
+              <div id="transactions-list"></div>
+              <button 
+                id="hide-search-btn"
+                class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition"
+              >
+                Hide Results
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Box Section -->
+        <div class="mt-6 border-t pt-6">
+          <button id="info-toggle" class="w-full text-left flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+            <span class="flex items-center font-medium text-blue-900">
+              <i class="bi bi-info-circle mr-2"></i>
+              How Categorization Works
+            </span>
+            <i class="bi bi-chevron-down text-blue-900 transition-transform" id="info-icon"></i>
+          </button>
+          
+          <div id="info-content" class="hidden mt-4 p-4 bg-blue-50 rounded-lg space-y-4 border border-blue-200">
+            <div>
+              <h4 class="font-semibold text-blue-900 mb-2">Three-tier Categorization System</h4>
+              <ul class="space-y-2 text-sm text-blue-800">
+                <li class="flex items-start">
+                  <span class="font-bold mr-2">1.</span>
+                  <span><strong>Merchant Mapping:</strong> Exact and substring matches from known merchants (100% confidence)</span>
+                </li>
+                <li class="flex items-start">
+                  <span class="font-bold mr-2">2.</span>
+                  <span><strong>Keyword Rules:</strong> Pattern-based categorization for common merchants like Netflix, YouTube, Spotify (95% confidence)</span>
+                </li>
+                <li class="flex items-start">
+                  <span class="font-bold mr-2">3.</span>
+                  <span><strong>Semantic Matching:</strong> AI-powered similarity matching for new merchants using sentence embeddings (40-90% confidence)</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="border-t border-blue-200 pt-4">
+              <h4 class="font-semibold text-blue-900 mb-2">Confidence Thresholds</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-blue-800">High Confidence</span>
+                  <span class="bg-green-200 text-green-800 px-3 py-1 rounded-full font-semibold">≥ 80%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-blue-800">Medium Confidence</span>
+                  <span class="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full font-semibold">60% - 79%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-blue-800">Low Confidence</span>
+                  <span class="bg-orange-200 text-orange-800 px-3 py-1 rounded-full font-semibold">&lt; 60%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-blue-200 pt-4">
+              <h4 class="font-semibold text-blue-900 mb-2">Special Categories</h4>
+              <ul class="space-y-2 text-sm text-blue-800">
+                <li><strong>Uncounted:</strong> Legitimate non-spending transactions (internal transfers, exchanges, balance migrations)</li>
+                <li><strong>Uncategorized:</strong> Transactions that need manual review or semantic matching</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Right Column: Manage Files & Status -->
-  <div class="lg:col-span-2 space-y-6">
-    <!-- Manage Files -->
-    <div
-      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
-    >
-      <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
+<!-- Tab 3: Data Management -->
+<div id="data-tab" class="settings-content hidden">
+  <div class="space-y-6">
+    <!-- Files Section -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
         <h2 class="text-xl font-bold text-white flex items-center">
-          <i class="bi bi-folder-fill mr-2"></i>
+          <i class="bi bi-file-earmark mr-2"></i>
           Uploaded Files
         </h2>
       </div>
       <div class="p-6">
         {% if files %}
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr class="bg-gray-50">
-                <th
-                  class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                >
-                  Filename
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                >
-                  Upload Date
-                </th>
-                <th
-                  class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                >
-                  Transactions
-                </th>
-                <th
-                  class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              {% for file in files %}
-              <tr class="hover:bg-gray-50 transition duration-200">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                    <i
-                      class="bi bi-file-earmark-text text-indigo-600 text-xl mr-3"
-                    ></i>
-                    <span class="text-sm font-medium text-gray-900"
-                      >{{ file.name }}</span
-                    >
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ file.uploaded_at|date:"M d, Y H:i" }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <span
-                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800"
-                  >
-                    {{ file.transaction_set.count }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <form
-                    method="post"
-                    action="{% url 'delete_file' file.id %}"
-                    class="inline"
-                    onsubmit="return confirm('⚠️ Delete {{ file.name }} and all its transactions? This cannot be undone.');"
-                  >
-                    {% csrf_token %}
-                    <button
-                      type="submit"
-                      class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition duration-200 flex items-center space-x-1"
-                    >
-                      <i class="bi bi-trash-fill"></i>
-                      <span>Delete</span>
-                    </button>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        <form method="POST" class="space-y-4">
+          {% csrf_token %}
+          <div class="space-y-2">
+            {% for file in files %}
+            <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" name="file" value="{{ file.id }}" 
+                     {% if file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
+                     class="w-4 h-4 text-indigo-600 rounded">
+              <span class="ml-3 flex-1">
+                <span class="font-medium text-gray-900">{{ file.name }}</span>
+                <span class="text-sm text-gray-500 block">Uploaded: {{ file.uploaded_at|date:"M d, Y H:i" }}</span>
+              </span>
+              <button type="button" class="delete-file-btn text-red-600 hover:text-red-800 text-sm" data-file-id="{{ file.id }}">
+                Delete
+              </button>
+            </label>
+            {% endfor %}
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+            Update Selection
+          </button>
+        </form>
         {% else %}
-        <div class="text-center py-12">
-          <i class="bi bi-inbox text-gray-300 text-6xl"></i>
-          <p class="text-gray-500 mt-4 text-lg font-medium">
-            No files uploaded yet
-          </p>
-          <p class="text-gray-400 mt-2">
-            Upload a CSV file to get started with your financial analysis
-          </p>
-        </div>
+        <p class="text-gray-600 text-center py-8">No files uploaded yet. Start by uploading a bank statement.</p>
         {% endif %}
       </div>
     </div>
 
-    <!-- Current Filter Status -->
-    <div
-      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
-    >
-      <div class="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
+    <!-- Currencies Section -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="bg-gradient-to-r from-teal-500 to-cyan-500 px-6 py-4">
         <h2 class="text-xl font-bold text-white flex items-center">
-          <i class="bi bi-sliders mr-2"></i>
-          Active Filters
+          <i class="bi bi-currency-exchange mr-2"></i>
+          Currencies
         </h2>
       </div>
       <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3
-              <h3
-              class="text-sm font-semibold text-gray-700 mb-3 flex items-center"
-            >
-              <i class="bi bi-files mr-2 text-purple-600"></i>
-              Selected Files
-            </h3>
-            {% if selected_file_ids %}
-              <ul class="space-y-2">
-                {% for file in files %}
-                  {% if file.id|stringformat:"s" in selected_file_ids %}
-                    <li
-                      class="flex items-center text-sm bg-purple-50 px-3 py-2 rounded-lg"
-                    >
-                      <i class="bi bi-check-circle-fill text-purple-600 mr-2"></i>
-                      <span class="text-gray-700">{{ file.name }}</span>
-                    </li>
-                  {% endif %}
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p
-                class="text-gray-500 italic text-sm bg-gray-50 px-4 py-3 rounded-lg"
-              >
-                All files included
-              </p>
-            {% endif %}
-          </div>
-          <div>
-            <h3
-              class="text-sm font-semibold text-gray-700 mb-3 flex items-center"
-            >
-              <i class="bi bi-cash-stack mr-2 text-purple-600"></i>
-              Selected Currencies
-            </h3>
-            {% if selected_currencies %}
-            <div class="flex flex-wrap gap-2">
-              {% for currency in selected_currencies %}
-              <span
-                class="inline-flex items-center px-3 py-2 bg-purple-100 text-purple-800 rounded-lg text-sm font-semibold"
-              >
-                <i class="bi bi-check-circle-fill mr-1"></i>
-                {{ currency }}
-              </span>
-              {% endfor %}
-            </div>
-            {% else %}
-            <p
-              class="text-gray-500 italic text-sm bg-gray-50 px-4 py-3 rounded-lg"
-            >
-              All currencies included
-            </p>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Category Management Section -->
-<div class="mt-8">
-  <div class="bg-white rounded-xl shadow-md overflow-hidden">
-    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4">
-      <h2 class="text-xl font-bold text-white flex items-center">
-        <i class="bi bi-tags-fill mr-2"></i>
-        Category Management
-      </h2>
-      <p class="text-purple-100 text-sm mt-1">
-        Search and update transaction categories
-      </p>
-    </div>
-    
-    <div class="p-6">
-      <!-- Search & Filter Bar -->
-      <div class="mb-6 flex flex-col md:flex-row gap-4">
-        <div class="flex-1">
-          <label for="searchTransactions" class="block text-sm font-medium text-gray-700 mb-2">
-            Search Transactions
-          </label>
-          <input
-            type="text"
-            id="searchTransactions"
-            placeholder="Search by description, category, or amount..."
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-        </div>
-        <div class="w-full md:w-48">
-          <label for="filterCategory" class="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Category
-          </label>
-          <select
-            id="filterCategory"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">All Categories</option>
-            {% for category in all_categories %}
-              <option value="{{ category }}">{{ category }}</option>
+        {% if all_currencies %}
+        <form method="POST" class="space-y-4">
+          {% csrf_token %}
+          <div class="space-y-2">
+            {% for currency in all_currencies %}
+            <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" name="currency" value="{{ currency }}"
+                     {% if currency in selected_currencies %}checked{% endif %}
+                     class="w-4 h-4 text-indigo-600 rounded">
+              <span class="ml-3 font-medium text-gray-900">{{ currency }}</span>
+            </label>
             {% endfor %}
-          </select>
-        </div>
-        <div class="w-full md:w-auto flex items-end">
-          <button
-            id="addCategoryBtn"
-            class="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2"
-          >
-            <i class="bi bi-plus-lg"></i>
-            <span>New Category</span>
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+            Update Selection
           </button>
-        </div>
+        </form>
+        {% else %}
+        <p class="text-gray-600 text-center py-8">No currencies found in your transactions.</p>
+        {% endif %}
       </div>
-          </select>
-        </div>
-      </div>
+    </div>
 
-      <!-- Transactions Table -->
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
-            <!-- Will be populated by JavaScript -->
-          </tbody>
-        </table>
-      </div>
 
-      <!-- Pagination -->
-      <div class="mt-4 flex items-center justify-between">
-        <div class="text-sm text-gray-600">
-          Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> transactions
-        </div>
-        <div class="flex gap-2">
-          <button
-            id="prevPage"
-            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled
-          >
-            <i class="bi bi-chevron-left"></i> Previous
+    <!-- Excluded Categories Section -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-ban mr-2"></i>
+          Excluded Categories
+        </h2>
+        <p class="text-red-100 text-sm mt-1">Select categories to hide from all dashboard graphs and statistics</p>
+      </div>
+      <div class="p-6">
+        {% if all_categories %}
+        <form method="POST" id="excluded-categories-form" class="space-y-4">
+          {% csrf_token %}
+          <div class="space-y-2">
+            {% for category in all_categories %}
+            <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
+              <input type="checkbox" name="excluded_category" value="{{ category }}"
+                     {% if category in excluded_categories %}checked{% endif %}
+                     class="w-4 h-4 text-red-600 rounded">
+              <span class="ml-3 font-medium text-gray-900">{{ category }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition">
+            Update Excluded Categories
           </button>
-          <button
-            id="nextPage"
-            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled
-          >
-            Next <i class="bi bi-chevron-right"></i>
-          </button>
-        </div>
+        </form>
+        <div id="excluded-status" class="mt-4 hidden p-3 rounded-lg"></div>
+        {% else %}
+        <p class="text-gray-600 text-center py-8">No categories available to exclude.</p>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<!-- Create Category Modal -->
-<div id="createCategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
-    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4 rounded-t-xl">
-      <h3 class="text-xl font-bold text-white flex items-center">
-        <i class="bi bi-tag-fill mr-2"></i>
-        Create New Category
-      </h3>
-    </div>
-    <div class="p-6">
-      <form id="createCategoryForm">
-        <div class="mb-4">
-          <label for="newCategoryName" class="block text-sm font-medium text-gray-700 mb-2">
-            Category Name
-          </label>
-          <input
-            type="text"
-            id="newCategoryName"
-            placeholder="e.g., Rent Deposit, Healthcare, Entertainment"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          />
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button
-            type="button"
-            id="cancelCategoryBtn"
-            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition duration-200"
-          >
-            <i class="bi bi-plus-lg mr-1"></i>
-            Create Category
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
-<!-- Back Button -->
-<div class="mt-8 text-center">
-  <a
-    href="{% url 'dashboard' %}"
-    class="inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition duration-200 space-x-2"
-  >
-    <i class="bi bi-arrow-left"></i>
-    <span>Back to Dashboard</span>
-  </a>
-</div>
+<style>
+  .settings-tab.active {
+    border-bottom-color: #4f46e5;
+    color: #4f46e5;
+  }
+</style>
 
 <script>
-// Category Management
-let allTransactions = [];
-let filteredTransactions = [];
-let allCategories = [];
-let currentPage = 1;
-const itemsPerPage = 20;
-
-// Fetch all transactions on page load
-async function loadTransactions() {
+  // Get all categories from Django template context as a global variable
+  const allCategoriesJson = '{{ all_categories|safe|escapejs }}';
+  let globalCategoryOptions = [];
   try {
-    const response = await fetch('/api/transactions/');
-    const data = await response.json();
-    allTransactions = data.transactions;
-    allCategories = data.all_categories || [];
-    filteredTransactions = allTransactions;
-    renderTable();
-  } catch (error) {
-    console.error('Error loading transactions:', error);
+    // Parse Django list representation to JavaScript array
+    globalCategoryOptions = allCategoriesJson
+      .replace(/^[\[\s]+/, '')  // Remove opening bracket and spaces
+      .replace(/[\]\s]+$/, '')  // Remove closing bracket and spaces
+      .split(',')
+      .map(cat => cat.trim().replace(/^['"]|['"]$/g, ''))  // Remove quotes
+      .filter(cat => cat.length > 0);
+  } catch (e) {
+    console.warn('Failed to parse categories, using fallback');
   }
-}
+  
+  // If parsing failed, include fallback categories
+  if (globalCategoryOptions.length === 0) {
+    globalCategoryOptions = [
+      'Groceries', 'Dining', 'Shopping', 'Transport', 'Travel',
+      'Health', 'Utilities', 'Leisure', 'Car', 'Insurance',
+      'Fee', 'Salary', 'Refund', 'Investment', 'Work', 'Donation',
+      'Uncounted', 'Bank Transfer', 'Vault', 'Other'
+    ];
+  }
 
-// Filter transactions based on search and category
-function filterTransactions() {
-  const searchTerm = document.getElementById('searchTransactions').value.toLowerCase();
-  const categoryFilter = document.getElementById('filterCategory').value;
-  
-  filteredTransactions = allTransactions.filter(transaction => {
-    const matchesSearch = 
-      transaction.booking_text.toLowerCase().includes(searchTerm) ||
-      transaction.category.toLowerCase().includes(searchTerm) ||
-      transaction.amount.toString().includes(searchTerm);
-    
-    const matchesCategory = !categoryFilter || transaction.category === categoryFilter;
-    
-    return matchesSearch && matchesCategory;
-  });
-  
-  currentPage = 1;
-  renderTable();
-}
+  // Global variable to store search results and pagination
+  let allSearchResults = [];
+  let currentResultsPage = 1;
+  const resultsPerPage = 10;
 
-// Render the transactions table
-function renderTable() {
-  const tbody = document.getElementById('transactionsTableBody');
-  const start = (currentPage - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  const pageTransactions = filteredTransactions.slice(start, end);
-  
-  tbody.innerHTML = pageTransactions.map(transaction => `
-    <tr class="hover:bg-gray-50" data-id="${transaction.id}">
-      <td class="px-4 py-3 text-sm text-gray-900">
-        ${transaction.date}
-      </td>
-      <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="${transaction.booking_text}">
-        ${transaction.booking_text}
-      </td>
-      <td class="px-4 py-3 text-sm ${transaction.amount < 0 ? 'text-red-600' : 'text-green-600'} font-medium">
-        ${transaction.amount.toLocaleString()} ${transaction.currency}
-      </td>
-      <td class="px-4 py-3">
-        <select 
-          class="category-select w-full px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          data-id="${transaction.id}"
-          data-original="${transaction.category}"
-        >
-          <option value="">Uncounted</option>
-          ${allCategories.map(cat => `
-            <option value="${cat}" ${transaction.category === cat ? 'selected' : ''}>
-              ${cat}
-            </option>
-          `).join('')}
-        </select>
-      </td>
-      <td class="px-4 py-3">
-        <button 
-          onclick="saveCategory(${transaction.id})"
-          class="save-btn px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition duration-200 hidden"
-          data-id="${transaction.id}"
-        >
-          <i class="bi bi-check-lg"></i> Save
-        </button>
-      </td>
-    </tr>
-  `).join('');
-  
-  // Update pagination info
-  document.getElementById('showingCount').textContent = Math.min(end, filteredTransactions.length);
-  document.getElementById('totalCount').textContent = filteredTransactions.length;
-  
-  // Update pagination buttons
-  document.getElementById('prevPage').disabled = currentPage === 1;
-  document.getElementById('nextPage').disabled = end >= filteredTransactions.length;
-  
-  // Attach change listeners to category selects
-  document.querySelectorAll('.category-select').forEach(select => {
-    select.addEventListener('change', function() {
-      const saveBtn = document.querySelector(`button.save-btn[data-id="${this.dataset.id}"]`);
-      if (this.value !== this.dataset.original) {
-        saveBtn.classList.remove('hidden');
-      } else {
-        saveBtn.classList.add('hidden');
-      }
-    });
-  });
-}
-
-// Save category change
-async function saveCategory(transactionId) {
-  const select = document.querySelector(`.category-select[data-id="${transactionId}"]`);
-  const newCategory = select.value;
-  
-  try {
-    const response = await fetch(`/api/transactions/${transactionId}/update-category/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
-      body: JSON.stringify({ category: newCategory })
-    });
-    
-    if (response.ok) {
-      // Update the original value
-      select.dataset.original = newCategory;
-      
-      // Hide save button
-      const saveBtn = document.querySelector(`button.save-btn[data-id="${transactionId}"]`);
-      saveBtn.classList.add('hidden');
-      
-      // Update the transaction in our local data
-      const transaction = allTransactions.find(t => t.id === transactionId);
-      if (transaction) {
-        transaction.category = newCategory;
-      }
-      
-      // Show success message
-      showMessage('Category updated successfully!', 'success');
-    } else {
-      showMessage('Failed to update category', 'error');
+  // Toast notification system
+  function showToast(message, type = 'info', duration = 3000) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.id = 'toast-container';
+      toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;';
+      document.body.appendChild(toastContainer);
     }
-  } catch (error) {
-    console.error('Error saving category:', error);
-    showMessage('Error updating category', 'error');
-  }
-}
 
-// Show temporary message
-function showMessage(message, type) {
-  const alertDiv = document.createElement('div');
-  alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-    type === 'success' ? 'bg-green-500' : 'bg-red-500'
-  } text-white`;
-  alertDiv.innerHTML = `
-    <div class="flex items-center">
-      <i class="bi bi-${type === 'success' ? 'check' : 'exclamation'}-circle-fill mr-2"></i>
+    // Create toast element
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ⓘ';
+    
+    toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn pointer-events-auto`;
+    toast.style.cssText = `animation: slideIn 0.3s ease-out; min-width: 250px;`;
+    toast.innerHTML = `
+      <span style="font-size: 18px; font-weight: bold;">${icon}</span>
       <span>${message}</span>
-    </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Remove toast after duration
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
+  // Add CSS animations for toast
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
   `;
-  document.body.appendChild(alertDiv);
-  
-  setTimeout(() => {
-    alertDiv.remove();
-  }, 3000);
-}
+  document.head.appendChild(style);
 
-// Event listeners
-document.getElementById('searchTransactions').addEventListener('input', filterTransactions);
-document.getElementById('filterCategory').addEventListener('change', filterTransactions);
-document.getElementById('prevPage').addEventListener('click', () => {
-  if (currentPage > 1) {
-    currentPage--;
-    renderTable();
+  console.log('Settings page JavaScript loaded - Version 2.0');
+
+  // Helper function to get CSRF token from cookie
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
   }
-});
-document.getElementById('nextPage').addEventListener('click', () => {
-  const maxPage = Math.ceil(filteredTransactions.length / itemsPerPage);
-  if (currentPage < maxPage) {
-    currentPage++;
-    renderTable();
+
+  // Tab switching
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const tabName = this.dataset.tab;
+      
+      // Hide all tabs
+      document.querySelectorAll('.settings-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+      
+      // Remove active class from all tabs
+      document.querySelectorAll('.settings-tab').forEach(t => {
+        t.classList.remove('active');
+        t.style.borderBottomColor = 'transparent';
+        t.style.color = '#4b5563';
+      });
+      
+      // Show selected tab
+      document.getElementById(tabName + '-tab').classList.remove('hidden');
+      
+      // Add active class to clicked tab
+      this.classList.add('active');
+      this.style.borderBottomColor = '#4f46e5';
+      this.style.color = '#4f46e5';
+      
+      // Load stats when categorization tab is clicked
+      if (tabName === 'categorization') {
+        loadCategorizationStats();
+      }
+    });
+  });
+
+  // Load stats on page load
+  function loadCategorizationStats() {
+    console.log('loadCategorizationStats called');
+    fetch('/api/categorization/stats/')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          updateCategorizationStatsUI(data.stats);
+        }
+      })
+      .catch(error => console.error('Error loading categorization stats:', error));
   }
-});
 
-// Modal functionality
-const modal = document.getElementById('createCategoryModal');
-const addCategoryBtn = document.getElementById('addCategoryBtn');
-const cancelCategoryBtn = document.getElementById('cancelCategoryBtn');
-const createCategoryForm = document.getElementById('createCategoryForm');
-
-// Open modal
-addCategoryBtn.addEventListener('click', () => {
-  modal.classList.remove('hidden');
-  document.getElementById('newCategoryName').focus();
-});
-
-// Close modal
-cancelCategoryBtn.addEventListener('click', () => {
-  modal.classList.add('hidden');
-  createCategoryForm.reset();
-});
-
-// Close modal on background click
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) {
-    modal.classList.add('hidden');
-    createCategoryForm.reset();
+  function updateCategorizationStatsUI(stats) {
+    document.getElementById('categorization-rate').textContent = 
+      stats.categorization_rate.toFixed(1) + '%';
+    document.getElementById('high-confidence-count').textContent = stats.high_confidence;
+    document.getElementById('medium-confidence-count').textContent = stats.medium_confidence;
+    document.getElementById('manual-corrections-count').textContent = stats.manually_categorized;
   }
-});
 
-// Create new category
-createCategoryForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
+  function recategorizeUncategorized() {
+    const btn = document.getElementById('recategorize-btn');
+    const statusDiv = document.getElementById('recategorize-status');
+    
+    // Show processing state
+    btn.disabled = true;
+    statusDiv.innerHTML = '<div class="flex items-center space-x-2"><i class="bi bi-arrow-clockwise animate-spin"></i><span>Processing...</span></div>';
+    statusDiv.classList.remove('hidden');
+    
+    // Get CSRF token
+    const csrfToken = getCookie('csrftoken');
+    
+    fetch('/api/categorization/recategorize/', { 
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json',
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        // Hide spinner and show success message
+        statusDiv.innerHTML = `
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p class="text-green-800 font-medium mb-2">✓ Successfully categorized ${data.categorized} transactions!</p>
+            <ul class="text-sm text-green-700 space-y-1">
+              <li>High confidence: ${data.high_confidence}</li>
+              <li>Medium confidence: ${data.medium_confidence}</li>
+              <li>Low confidence: ${data.low_confidence}</li>
+            </ul>
+          </div>
+        `;
+        
+        // Refresh stats and low confidence transactions
+        setTimeout(() => {
+          loadCategorizationStats();
+          viewLowConfidenceTransactions();
+        }, 500);
+      })
+      .catch(error => {
+        console.error('Error recategorizing:', error);
+        statusDiv.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error: ${error.message}</div>`;
+      })
+      .finally(() => {
+        btn.disabled = false;
+      });
+  }
+
+  function viewLowConfidenceTransactions() {
+    const container = document.getElementById('low-confidence-container');
+    const txContainer = document.getElementById('low-confidence-transactions');
+    
+    // Show container
+    container.classList.remove('hidden');
+    
+    // Show loading
+    txContainer.innerHTML = '<div class="text-center py-8"><i class="bi bi-arrow-clockwise animate-spin text-2xl text-gray-400"></i><p class="text-gray-500 mt-2">Loading transactions...</p></div>';
+    
+    fetch('/api/categorization/low-confidence/')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.transactions.length > 0) {
+          displayLowConfidenceTransactions(data.transactions);
+        } else if (data.transactions.length === 0) {
+          txContainer.innerHTML = '<div class="text-center py-12"><i class="bi bi-check-circle text-4xl text-green-500 mb-2"></i><p class="text-gray-600 font-medium">No low confidence predictions found!</p><p class="text-sm text-gray-500">All transactions are categorized with good confidence.</p></div>';
+        } else {
+          txContainer.innerHTML = '<div class="text-center py-4 text-red-500">Error: ' + data.error + '</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Error loading low confidence transactions:', error);
+        txContainer.innerHTML = '<div class="text-center py-4 text-red-500">Error loading transactions</div>';
+      });
+  }
+
+  function displayLowConfidenceTransactions(transactions) {
+    const container = document.getElementById('low-confidence-transactions');
+    
+    // Sort by confidence (lowest first)
+    const sorted = transactions.sort((a, b) => a.confidence - b.confidence);
+    
+    let html = '<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="border-b-2 border-gray-200"><tr><th class="text-left py-3 px-3 font-semibold text-gray-700">Date</th><th class="text-left py-3 px-3 font-semibold text-gray-700">Merchant</th><th class="text-left py-3 px-3 font-semibold text-gray-700">Category</th><th class="text-right py-3 px-3 font-semibold text-gray-700">Confidence</th><th class="text-right py-3 px-3 font-semibold text-gray-700">Amount</th></tr></thead><tbody>';
+    
+    sorted.forEach((transaction) => {
+      const confidence = transaction.confidence * 100;
+      let confidenceClass = 'bg-red-100 text-red-800';
+      if (confidence >= 80) {
+        confidenceClass = 'bg-green-100 text-green-800';
+      } else if (confidence >= 60) {
+        confidenceClass = 'bg-yellow-100 text-yellow-800';
+      } else if (confidence >= 40) {
+        confidenceClass = 'bg-orange-100 text-orange-800';
+      }
+      
+      html += `
+        <tr class="border-b border-gray-100 hover:bg-gray-50">
+          <td class="py-3 px-3 text-gray-900">${transaction.date}</td>
+          <td class="py-3 px-3 text-gray-900 font-medium">${transaction.booking_text}</td>
+          <td class="py-3 px-3"><span class="inline-block bg-indigo-100 text-indigo-800 px-2 py-1 rounded">${transaction.category}</span></td>
+          <td class="py-3 px-3 text-right"><span class="inline-block ${confidenceClass} px-3 py-1 rounded-full font-medium">${confidence.toFixed(1)}%</span></td>
+          <td class="py-3 px-3 text-right text-gray-900">${parseFloat(transaction.amount).toFixed(2)}</td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table></div>';
+    
+    if (sorted.length === 0) {
+      html = '<div class="text-center py-12"><i class="bi bi-check-circle text-4xl text-green-500 mb-2"></i><p class="text-gray-600 font-medium">No low confidence predictions found!</p><p class="text-sm text-gray-500">All transactions are categorized with good confidence.</p></div>';
+    }
+    
+    container.innerHTML = html;
+  }
+
+  // Event listeners
+  document.getElementById('recategorize-btn').addEventListener('click', recategorizeUncategorized);
+  document.getElementById('view-low-confidence-btn').addEventListener('click', viewLowConfidenceTransactions);
+  document.getElementById('hide-low-confidence-btn').addEventListener('click', function() {
+    document.getElementById('low-confidence-container').classList.add('hidden');
+  });
+
+  // File upload functionality
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const uploadStatus = document.getElementById('uploadStatus');
+
+  if (dropZone && fileInput) {
+    // Click to select files
+    dropZone.addEventListener('click', function() {
+      fileInput.click();
+    });
+
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+      handleFileUpload(e.target.files);
+    });
+
+    // Drag and drop
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropZone.classList.add('bg-blue-200', 'border-blue-400');
+    });
+
+    dropZone.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('bg-blue-200', 'border-blue-400');
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('bg-blue-200', 'border-blue-400');
+      handleFileUpload(e.dataTransfer.files);
+    });
+  }
+
+  function handleFileUpload(files) {
+    if (!files || files.length === 0) return;
+
+    console.log('handleFileUpload called with', files.length, 'files');
+
+    const formData = new FormData();
+    for (let file of files) {
+      formData.append('csv_file', file);
+      console.log('Added file to formData:', file.name);
+    }
+
+    uploadStatus.innerHTML = '<div class="flex items-center space-x-2"><i class="bi bi-arrow-clockwise animate-spin"></i><span>Uploading and processing...</span></div>';
+    uploadStatus.classList.remove('hidden');
+
+    const csrfToken = getCookie('csrftoken');
+    console.log('CSRF token:', csrfToken ? 'Found' : 'NOT FOUND');
+    if (!csrfToken) {
+      uploadStatus.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error: CSRF token not found. Please refresh the page.</div>';
+      return;
+    }
+
+    console.log('Sending POST request to /settings/');
+    fetch('/settings/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': csrfToken
+      }
+    })
+      .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        if (response.ok) {
+          // Show success message
+          uploadStatus.innerHTML = `
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p class="text-green-800 font-medium mb-1">✓ Files uploaded and processed successfully!</p>
+              <p class="text-sm text-green-700">Transactions have been imported and categorized.</p>
+            </div>
+          `;
+          
+          // Refresh categorization stats after a short delay
+          setTimeout(() => {
+            loadCategorizationStats();
+            // Reload the page to show any server-side messages
+            location.reload();
+          }, 2000);
+        } else {
+          console.error('Upload failed with status:', response.status);
+          response.text().then(text => console.error('Response body:', text));
+          uploadStatus.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error uploading file (status ' + response.status + '). Please try again.</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Error uploading file:', error);
+        uploadStatus.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error uploading file: ' + error.message + '</div>';
+      });
+  }
+
+  // Load categorization stats on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    loadCategorizationStats();
+    
+    // Setup delete file buttons
+    document.querySelectorAll('.delete-file-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const fileId = this.dataset.fileId;
+        if (confirm('Are you sure you want to delete this file? This will also delete all associated transactions.')) {
+          deleteFile(fileId);
+        }
+      });
+    });
+    
+    // Setup info toggle
+    const infoToggle = document.getElementById('info-toggle');
+    const infoContent = document.getElementById('info-content');
+    const infoIcon = document.getElementById('info-icon');
+    
+    if (infoToggle) {
+      infoToggle.addEventListener('click', function() {
+        infoContent.classList.toggle('hidden');
+        infoIcon.style.transform = infoContent.classList.contains('hidden') ? 'rotate(0)' : 'rotate(180deg)';
+      });
+    }
+    
+    // Setup manual categorization
+    const searchMerchantBtn = document.getElementById('search-merchant-btn');
+    const merchantSearch = document.getElementById('merchant-search');
+    const searchResults = document.getElementById('search-results');
+    const hideSearchBtn = document.getElementById('hide-search-btn');
+    
+    if (searchMerchantBtn) {
+      searchMerchantBtn.addEventListener('click', searchMerchants);
+      merchantSearch.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          searchMerchants();
+        }
+      });
+      
+      // Add event listeners for new search fields
+      const categorySearch = document.getElementById('category-search');
+      const amountSearch = document.getElementById('amount-search');
+      
+      if (categorySearch) {
+        categorySearch.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            searchMerchants();
+          }
+        });
+      }
+      
+      if (amountSearch) {
+        amountSearch.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            searchMerchants();
+          }
+        });
+      }
+      
+      hideSearchBtn.addEventListener('click', function() {
+        searchResults.classList.add('hidden');
+        merchantSearch.value = '';
+        document.getElementById('category-search').value = '';
+        document.getElementById('amount-search').value = '';
+      });
+    }
+  });
   
-  const categoryName = document.getElementById('newCategoryName').value.trim();
-  
-  if (!categoryName) {
-    showMessage('Please enter a category name', 'error');
-    return;
+  function searchMerchants() {
+    const merchantTerm = document.getElementById('merchant-search').value.trim().toLowerCase();
+    const categoryTerm = document.getElementById('category-search').value.trim().toLowerCase();
+    const amountTerm = document.getElementById('amount-search').value.trim();
+    
+    if (!merchantTerm && !categoryTerm && !amountTerm) {
+      showToast('Please enter at least one search criteria: merchant name, category, or amount', 'error');
+      return;
+    }
+    
+    // Parse amount search (supports >, <, >=, <=, =, or just a number)
+    let amountFilter = null;
+    if (amountTerm) {
+      const match = amountTerm.match(/^([><=]*)([\d.]+)$/);
+      if (match) {
+        const operator = match[1] || '=';
+        const value = parseFloat(match[2]);
+        amountFilter = { operator, value };
+      } else {
+        showToast('Invalid amount format. Use: 50, >100, <200, >=150, <=300, or =75', 'error');
+        return;
+      }
+    }
+    
+    fetch(`/api/transactions/`)
+      .then(response => response.json())
+      .then(data => {
+        let transactions = data.transactions;
+        
+        // Apply merchant filter
+        if (merchantTerm) {
+          transactions = transactions.filter(t => 
+            t.booking_text.toLowerCase().includes(merchantTerm)
+          );
+        }
+        
+        // Apply category filter
+        if (categoryTerm) {
+          transactions = transactions.filter(t => 
+            (t.category || '').toLowerCase().includes(categoryTerm)
+          );
+        }
+        
+        // Apply amount filter
+        if (amountFilter) {
+          const { operator, value } = amountFilter;
+          transactions = transactions.filter(t => {
+            const amount = Math.abs(parseFloat(t.amount));
+            switch (operator) {
+              case '>': return amount > value;
+              case '<': return amount < value;
+              case '>=': return amount >= value;
+              case '<=': return amount <= value;
+              case '=': return amount === value;
+              default: return true;
+            }
+          });
+        }
+        
+        if (transactions.length === 0) {
+          document.getElementById('transactions-list').innerHTML = '<p class="text-gray-500">No transactions found matching your criteria.</p>';
+          document.getElementById('search-results').classList.remove('hidden');
+        } else {
+          // Store all results globally for pagination
+          allSearchResults = transactions;
+          currentResultsPage = 1;
+          
+          // Display first page and show results container
+          displaySearchResultsPage();
+          document.getElementById('search-results').classList.remove('hidden');
+        }
+      })
+      .catch(error => {
+        console.error('Error searching merchants:', error);
+        showToast('Error searching merchants', 'error');
+      });
   }
   
-  try {
-    const response = await fetch('/api/categories/create/', {
+  function displaySearchResultsPage() {
+    const startIdx = (currentResultsPage - 1) * resultsPerPage;
+    const endIdx = startIdx + resultsPerPage;
+    const pageTransactions = allSearchResults.slice(startIdx, endIdx);
+    
+    let html = '<div class="space-y-2">';
+    pageTransactions.forEach(t => {
+      html += `
+        <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+              <p class="font-medium text-gray-900 text-sm">${t.booking_text}</p>
+              <p class="text-xs text-gray-500">${t.date} • ${t.amount} ${t.currency}</p>
+            </div>
+            <span class="text-xs font-semibold px-2 py-1 rounded" id="category-badge-${t.id}"></span>
+          </div>
+          <div class="flex gap-2">
+            <select class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500" 
+                    data-transaction-id="${t.id}" 
+                    data-merchant="${t.booking_text}">
+              <option value="">-- Select Category --</option>
+              ${globalCategoryOptions.map(cat => `<option value="${cat}" ${t.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+            </select>
+            <button class="apply-category-btn px-3 py-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium transition" 
+                    data-transaction-id="${t.id}" 
+                    data-merchant="${t.booking_text}">
+              Apply
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    // Add pagination info and controls
+    const totalPages = Math.ceil(allSearchResults.length / resultsPerPage);
+    html += `
+      <div class="mt-4 flex items-center justify-between bg-gray-100 p-3 rounded-lg">
+        <span class="text-sm text-gray-600">Showing ${startIdx + 1}-${Math.min(endIdx, allSearchResults.length)} of ${allSearchResults.length} transactions</span>
+        <div class="flex gap-2">
+          <button class="pagination-prev px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition ${currentResultsPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                  onclick="previousResultsPage()" 
+                  ${currentResultsPage === 1 ? 'disabled' : ''}>
+            ← Previous
+          </button>
+          <span class="px-3 py-1 text-sm font-medium">${currentResultsPage} / ${totalPages}</span>
+          <button class="pagination-next px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition ${currentResultsPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" 
+                  onclick="nextResultsPage()" 
+                  ${currentResultsPage === totalPages ? 'disabled' : ''}>
+            Next →
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('transactions-list').innerHTML = html;
+    
+    // Set category badge styles
+    pageTransactions.forEach(t => {
+      const badge = document.getElementById(`category-badge-${t.id}`);
+      if (badge) {
+        let badgeClass = 'bg-indigo-200 text-indigo-800';
+        if (t.category === 'Uncounted') {
+          badgeClass = 'bg-gray-300 text-gray-800';
+        } else if (t.category === 'Bank Transfer') {
+          badgeClass = 'bg-blue-200 text-blue-800';
+        }
+        badge.className = `text-xs font-semibold px-2 py-1 rounded ${badgeClass}`;
+        badge.textContent = t.category || 'Uncategorized';
+      }
+    });
+    
+    // Add event listeners to apply buttons
+    document.querySelectorAll('.apply-category-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const transactionId = this.dataset.transactionId;
+        const merchant = this.dataset.merchant;
+        const select = document.querySelector(`select[data-transaction-id="${transactionId}"]`);
+        const category = select.value;
+        
+        if (!category) {
+          showToast('Please select a category', 'error');
+          return;
+        }
+        
+        applyCategoryToTransaction(transactionId, category, merchant);
+      });
+    });
+  }
+  
+  function previousResultsPage() {
+    if (currentResultsPage > 1) {
+      currentResultsPage--;
+      displaySearchResultsPage();
+      // Scroll to top of results
+      document.getElementById('transactions-list').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+  
+  function nextResultsPage() {
+    const totalPages = Math.ceil(allSearchResults.length / resultsPerPage);
+    if (currentResultsPage < totalPages) {
+      currentResultsPage++;
+      displaySearchResultsPage();
+      // Scroll to top of results
+      document.getElementById('transactions-list').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+  
+  function applyCategoryToTransaction(transactionId, category, merchant) {
+    const csrfToken = getCookie('csrftoken');
+    
+    fetch(`/api/transactions/${transactionId}/update-category/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}'
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      body: JSON.stringify({ name: categoryName })
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok && data.success) {
-      // Add new category to the arrays
-      allCategories.push(categoryName);
-      allCategories.sort();
-      
-      // Add new category to filter dropdown
-      const filterSelect = document.getElementById('filterCategory');
-      const option = document.createElement('option');
-      option.value = categoryName;
-      option.textContent = categoryName;
-      filterSelect.appendChild(option);
-      
-      // Close modal and reset form
-      modal.classList.add('hidden');
-      createCategoryForm.reset();
-      
-      // Re-render table to update category dropdowns
-      renderTable();
-      
-      showMessage(`Category "${categoryName}" created successfully!`, 'success');
-    } else {
-      showMessage(data.error || 'Failed to create category', 'error');
-    }
-  } catch (error) {
-    console.error('Error creating category:', error);
-    showMessage('Error creating category', 'error');
+      body: JSON.stringify({
+        category: category
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast(`Category "${category}" applied to all ${merchant} transactions!`, 'success');
+          // Refresh the current page without resetting pagination
+          const merchantTerm = document.getElementById('merchant-search').value.trim().toLowerCase();
+          const categoryTerm = document.getElementById('category-search').value.trim().toLowerCase();
+          const amountTerm = document.getElementById('amount-search').value.trim();
+          
+          // Re-fetch and re-filter transactions
+          fetch(`/api/transactions/`)
+            .then(response => response.json())
+            .then(data => {
+              let transactions = data.transactions;
+              
+              // Apply filters
+              if (merchantTerm) {
+                transactions = transactions.filter(t => 
+                  t.booking_text.toLowerCase().includes(merchantTerm)
+                );
+              }
+              if (categoryTerm) {
+                transactions = transactions.filter(t => 
+                  (t.category || '').toLowerCase().includes(categoryTerm)
+                );
+              }
+              if (amountTerm) {
+                const match = amountTerm.match(/^([><=]*)([\d.]+)$/);
+                if (match) {
+                  const operator = match[1] || '=';
+                  const value = parseFloat(match[2]);
+                  transactions = transactions.filter(t => {
+                    const amount = Math.abs(parseFloat(t.amount));
+                    switch (operator) {
+                      case '>': return amount > value;
+                      case '<': return amount < value;
+                      case '>=': return amount >= value;
+                      case '<=': return amount <= value;
+                      case '=': return amount === value;
+                      default: return true;
+                    }
+                  });
+                }
+              }
+              
+              // Update results while maintaining current page
+              allSearchResults = transactions;
+              displaySearchResultsPage();
+            });
+          
+          // Reload categorization stats
+          loadCategorizationStats();
+        } else {
+          showToast('Error updating category: ' + data.error, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error updating category:', error);
+        showToast('Error updating category', 'error');
+      });
   }
-});
 
-// Load transactions on page load
-loadTransactions();
+  function deleteFile(fileId) {
+    const btn = document.querySelector(`[data-file-id="${fileId}"]`);
+    const row = btn.closest('label');
+    
+    fetch(`/delete-file/${fileId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Remove the row with animation
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+          row.remove();
+          // Show success message
+          const filesContainer = document.querySelector('form');
+          if (filesContainer && filesContainer.querySelectorAll('label').length === 0) {
+            filesContainer.innerHTML = '<p class="text-gray-600 text-center py-8">No files uploaded yet. Start by uploading a bank statement.</p>';
+          }
+        }, 300);
+      } else {
+        showToast('Error deleting file: ' + (data.error || 'Unknown error'), 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting file:', error);
+      showToast('Error deleting file: ' + error.message, 'error');
+    });
+  }
+
+  // Handle excluded categories form submission
+  const excludedCategoriesForm = document.getElementById('excluded-categories-form');
+  if (excludedCategoriesForm) {
+    excludedCategoriesForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const csrfToken = getCookie('csrftoken');
+      const formData = new FormData(this);
+      const excludedCategories = formData.getAll('excluded_category');
+      
+      fetch('/api/excluded-categories/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          excluded_categories: excludedCategories
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const statusDiv = document.getElementById('excluded-status');
+        if (data.success) {
+          statusDiv.className = 'mt-4 p-3 rounded-lg bg-green-50 border border-green-200';
+          statusDiv.innerHTML = '<i class="bi bi-check-circle text-green-600 mr-2"></i><span class="text-green-800 font-medium">Excluded categories updated successfully!</span>';
+          statusDiv.classList.remove('hidden');
+          setTimeout(() => {
+            statusDiv.classList.add('hidden');
+          }, 3000);
+        } else {
+          statusDiv.className = 'mt-4 p-3 rounded-lg bg-red-50 border border-red-200';
+          statusDiv.innerHTML = '<i class="bi bi-exclamation-circle text-red-600 mr-2"></i><span class="text-red-800 font-medium">Error: ' + data.error + '</span>';
+          statusDiv.classList.remove('hidden');
+        }
+      })
+      .catch(error => {
+        console.error('Error updating excluded categories:', error);
+        const statusDiv = document.getElementById('excluded-status');
+        statusDiv.className = 'mt-4 p-3 rounded-lg bg-red-50 border border-red-200';
+        statusDiv.innerHTML = '<i class="bi bi-exclamation-circle text-red-600 mr-2"></i><span class="text-red-800 font-medium">Error: ' + error.message + '</span>';
+        statusDiv.classList.remove('hidden');
+      });
+    });
+  }
 </script>
-
 {% endblock %}

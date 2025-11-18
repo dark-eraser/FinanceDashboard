@@ -89,12 +89,21 @@ class SemanticCategorizer:
         self.data_dir = data_dir
 
         # Ensure data directory exists
-        os.makedirs(data_dir, exist_ok=True)
+        try:
+            os.makedirs(data_dir, exist_ok=True)
+            print(f"SemanticCategorizer: Data directory: {data_dir}")
+        except Exception as e:
+            print(f"ERROR: Failed to create data directory {data_dir}: {e}")
+            raise
 
         # File paths for persistent storage
         self.merchants_file = os.path.join(data_dir, "known_merchants.json")
         self.embeddings_file = os.path.join(data_dir, "merchant_embeddings.pkl")
         self.corrections_file = os.path.join(data_dir, "user_corrections.json")
+
+        print(f"SemanticCategorizer: merchants_file={self.merchants_file}")
+        print(f"SemanticCategorizer: embeddings_file={self.embeddings_file}")
+        print(f"SemanticCategorizer: corrections_file={self.corrections_file}")
 
         # In-memory storage
         self.known_merchants: Dict[str, str] = {}  # merchant -> category
@@ -104,10 +113,18 @@ class SemanticCategorizer:
 
         # Load merchant mapping for rule-based categorization
         self.merchant_mapping: Dict[str, str] = {}  # merchant -> category
-        self._load_merchant_mapping()
+        try:
+            self._load_merchant_mapping()
+        except Exception as e:
+            print(f"WARNING: Failed to load merchant mapping: {e}")
 
         # Load existing data
-        self._load_data()
+        try:
+            self._load_data()
+        except Exception as e:
+            print(f"WARNING: Failed to load existing data: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _load_merchant_mapping(self):
         """Load merchant category mapping from JSON file."""
@@ -132,21 +149,36 @@ class SemanticCategorizer:
         """Load known merchants, embeddings, and correction history from disk."""
         # Load known merchants
         if os.path.exists(self.merchants_file):
-            with open(self.merchants_file, "r") as f:
-                self.known_merchants = json.load(f)
+            try:
+                with open(self.merchants_file, "r") as f:
+                    self.known_merchants = json.load(f)
+                print(f"Loaded {len(self.known_merchants)} known merchants")
+            except Exception as e:
+                print(f"ERROR: Failed to load merchants from {self.merchants_file}: {e}")
 
         # Load embeddings
         if os.path.exists(self.embeddings_file):
-            with open(self.embeddings_file, "rb") as f:
-                self.merchant_embeddings = pickle.load(f)
+            try:
+                with open(self.embeddings_file, "rb") as f:
+                    self.merchant_embeddings = pickle.load(f)
+                print(f"Loaded {len(self.merchant_embeddings)} merchant embeddings")
+            except Exception as e:
+                print(f"ERROR: Failed to load embeddings from {self.embeddings_file}: {e}")
 
         # Load correction history
         if os.path.exists(self.corrections_file):
-            with open(self.corrections_file, "r") as f:
-                self.correction_history = json.load(f)
+            try:
+                with open(self.corrections_file, "r") as f:
+                    self.correction_history = json.load(f)
+                print(f"Loaded {len(self.correction_history)} corrections")
+            except Exception as e:
+                print(f"ERROR: Failed to load corrections from {self.corrections_file}: {e}")
 
         # Build confidence adjustments from correction history
-        self._build_confidence_adjustments()
+        try:
+            self._build_confidence_adjustments()
+        except Exception as e:
+            print(f"ERROR: Failed to build confidence adjustments: {e}")
 
     def _save_data(self):
         """Save all data to disk."""

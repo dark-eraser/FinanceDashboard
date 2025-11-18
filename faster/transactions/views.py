@@ -30,6 +30,11 @@ def filter_category_totals_by_excluded(category_totals, excluded_categories=None
 def settings_view(request):
     """Settings view for managing data sources, currencies, and uploads"""
     import json
+    import sys
+
+    print(f"DEBUG: settings_view called, method={request.method}", file=sys.stderr, flush=True)
+    print(f"DEBUG: request.FILES keys: {list(request.FILES.keys())}", file=sys.stderr, flush=True)
+    print(f"DEBUG: request.POST keys: {list(request.POST.keys())}", file=sys.stderr, flush=True)
 
     from .models import DashboardSettings, Transaction, UploadedFile
 
@@ -52,6 +57,7 @@ def settings_view(request):
     # Handle file upload
     if request.method == "POST" and "csv_file" in request.FILES:
         csv_file = request.FILES["csv_file"]
+        print(f"DEBUG: File upload received: {csv_file.name}", flush=True)
 
         try:
             import io
@@ -59,6 +65,7 @@ def settings_view(request):
             import pandas as pd
 
             content = csv_file.read().decode("utf-8")
+            print(f"DEBUG: File content read, length: {len(content)}", flush=True)
 
             # Try different separators
             df = None
@@ -254,7 +261,7 @@ def settings_view(request):
 
     return render(
         request,
-        "transactions/settings.html",
+        "dashboard/settings.html",
         {
             "files": files,
             "all_currencies": all_currencies,
@@ -1093,7 +1100,7 @@ def dashboard(request):
 
     return render(
         request,
-        "transactions/dashboard.html",
+        "dashboard/dashboard.html",
         {
             "transactions": transactions,
             "top_spending": top_spending,
@@ -1655,21 +1662,36 @@ def dashboard_data_ajax(request):
 @require_http_methods(["GET"])
 def api_categorization_stats(request):
     """API endpoint to get categorization statistics"""
+    import sys
+    print("=" * 80, file=sys.stderr)
+    print("DEBUG: api_categorization_stats called", file=sys.stderr)
+    sys.stderr.flush()
+    
     try:
+        print("DEBUG: Importing TransactionCategorizationService", file=sys.stderr)
+        sys.stderr.flush()
         from .categorization_service import TransactionCategorizationService
 
+        print("DEBUG: Creating TransactionCategorizationService instance", file=sys.stderr)
+        sys.stderr.flush()
         categorization_service = TransactionCategorizationService()
 
+        print("DEBUG: Calling get_categorization_stats()", file=sys.stderr)
+        sys.stderr.flush()
         stats = categorization_service.get_categorization_stats()
+        
+        print(f"DEBUG: Stats retrieved successfully: {stats}", file=sys.stderr)
+        sys.stderr.flush()
         return JsonResponse({"success": True, "stats": stats})
 
     except Exception as e:
-        import sys
         import traceback
 
         error_msg = f"{str(e)}\n{traceback.format_exc()}"
-        print(f"Error in api_categorization_stats: {error_msg}", file=sys.stderr)
+        print(f"ERROR in api_categorization_stats: {error_msg}", file=sys.stderr)
+        sys.stderr.flush()
         traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         return JsonResponse(
             {"success": False, "error": str(e), "details": error_msg}, status=500
         )

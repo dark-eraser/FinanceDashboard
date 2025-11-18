@@ -24,7 +24,15 @@ class TransactionCategorizationService:
 
     def __init__(self):
         data_dir = os.path.join(settings.BASE_DIR, "semantic_data")
-        self.categorizer = SemanticCategorizer(data_dir=data_dir)
+        try:
+            self.categorizer = SemanticCategorizer(data_dir=data_dir)
+        except Exception as e:
+            import sys
+            import traceback
+            print(f"ERROR: Failed to initialize SemanticCategorizer: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            sys.stderr.flush()
+            raise
 
     def categorize_transaction(
         self, transaction: Transaction, save: bool = True
