@@ -226,6 +226,10 @@ def settings_view(request):
                 )
 
         except Exception as e:
+            import traceback
+
+            error_msg = f"Error processing file: {str(e)}\n{traceback.format_exc()}"
+            print(f"[ERROR] {error_msg}", flush=True)
             error = f"Error processing file: {str(e)}"
 
     # Handle settings update
@@ -1660,7 +1664,15 @@ def api_categorization_stats(request):
         return JsonResponse({"success": True, "stats": stats})
 
     except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)}, status=500)
+        import sys
+        import traceback
+
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
+        print(f"Error in api_categorization_stats: {error_msg}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        return JsonResponse(
+            {"success": False, "error": str(e), "details": error_msg}, status=500
+        )
 
 
 @csrf_exempt

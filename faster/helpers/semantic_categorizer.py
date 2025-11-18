@@ -499,9 +499,19 @@ class SemanticCategorizer:
 
     def get_stats(self) -> Dict:
         """Get statistics about the categorizer."""
-        return {
-            "total_known_merchants": len(self.known_merchants),
-            "total_corrections": len(self.correction_history),
-            "categories": list(set(self.known_merchants.values())),
-            "model_loaded": self.model is not None,
-        }
+        try:
+            return {
+                "total_known_merchants": len(self.known_merchants),
+                "total_corrections": len(self.correction_history),
+                "categories": list(set(self.known_merchants.values())),
+                "model_loaded": self.model is not None,
+            }
+        except Exception as e:
+            print(f"Error in get_stats: {e}")
+            return {
+                "total_known_merchants": 0,
+                "total_corrections": 0,
+                "categories": [],
+                "model_loaded": False,
+                "error": str(e),
+            }

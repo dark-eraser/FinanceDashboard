@@ -224,37 +224,54 @@ class TransactionCategorizationService:
 
     def get_categorization_stats(self) -> Dict:
         """Get overall categorization statistics."""
-        total_transactions = Transaction.objects.count()
-        categorized = Transaction.objects.exclude(
-            category__in=["", "Uncategorized", "nan"]
-        ).count()
-        manually_categorized = Transaction.objects.filter(
-            is_manually_categorized=True
-        ).count()
-        high_confidence = Transaction.objects.filter(
-            category_confidence__gte=0.8
-        ).count()
-        medium_confidence = Transaction.objects.filter(
-            category_confidence__gte=0.6, category_confidence__lt=0.8
-        ).count()
-        low_confidence = Transaction.objects.filter(
-            category_confidence__lt=0.6, category_confidence__gt=0.0
-        ).count()
+        try:
+            total_transactions = Transaction.objects.count()
+            categorized = Transaction.objects.exclude(
+                category__in=["", "Uncategorized", "nan"]
+            ).count()
+            manually_categorized = Transaction.objects.filter(
+                is_manually_categorized=True
+            ).count()
+            high_confidence = Transaction.objects.filter(
+                category_confidence__gte=0.8
+            ).count()
+            medium_confidence = Transaction.objects.filter(
+                category_confidence__gte=0.6, category_confidence__lt=0.8
+            ).count()
+            low_confidence = Transaction.objects.filter(
+                category_confidence__lt=0.6, category_confidence__gt=0.0
+            ).count()
 
-        semantic_stats = self.categorizer.get_stats()
+            try:
+                semantic_stats = self.categorizer.get_stats()
+            except Exception as e:
+                print(f"Warning: Could not get semantic stats: {e}")
+                semantic_stats = {
+                    "total_known_merchants": 0,
+                    "total_corrections": 0,
+                    "categories": [],
+                    "model_loaded": False,
+                    "error": str(e),
+                }
 
-        return {
-            "total_transactions": total_transactions,
-            "categorized": categorized,
-            "categorization_rate": (categorized / total_transactions * 100)
-            if total_transactions > 0
-            else 0,
-            "manually_categorized": manually_categorized,
-            "high_confidence": high_confidence,
-            "medium_confidence": medium_confidence,
-            "low_confidence": low_confidence,
-            "semantic_categorizer": semantic_stats,
-        }
+            return {
+                "total_transactions": total_transactions,
+                "categorized": categorized,
+                "categorization_rate": (categorized / total_transactions * 100)
+                if total_transactions > 0
+                else 0,
+                "manually_categorized": manually_categorized,
+                "high_confidence": high_confidence,
+                "medium_confidence": medium_confidence,
+                "low_confidence": low_confidence,
+                "semantic_categorizer": semantic_stats,
+            }
+        except Exception as e:
+            import traceback
+
+            print(f"Error in get_categorization_stats: {e}")
+            traceback.print_exc()
+            raise
 
     def recategorize_uncategorized_transactions(self) -> Dict:
         """
