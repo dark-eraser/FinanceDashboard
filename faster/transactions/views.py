@@ -1138,6 +1138,74 @@ def dashboard(request):
         "income": monthly_income,
     }
 
+    # Calculate monthly expenses by top categories
+    monthly_expenses_by_category = defaultdict(
+        lambda: defaultdict(float)
+    )  # {month: {category: amount}}
+    for t in all_transactions:
+        if t.amount and t.amount < 0 and t.category and t.category != "Uncounted":
+            transaction_date = parse_date(t.date)
+            if not transaction_date:
+                continue
+            month_key = transaction_date.strftime("%Y-%m")
+            monthly_expenses_by_category[month_key][t.category] += abs(t.amount)
+
+    # Get top 5 expense categories for monthly breakdown
+    top_expense_categories = (
+        sorted(top_spending, key=lambda x: x["total"], reverse=True)[:5]
+        if top_spending
+        else []
+    )
+    top_expense_cat_names = [cat["category"] for cat in top_expense_categories]
+
+    # Build monthly expenses dataset
+    monthly_expenses_datasets = []
+    for category in top_expense_cat_names:
+        data = [
+            monthly_expenses_by_category[month].get(category, 0)
+            for month in sorted_months
+        ]
+        monthly_expenses_datasets.append({"label": category, "data": data})
+
+    monthly_category_expenses_data = {
+        "labels": monthly_labels,
+        "datasets": monthly_expenses_datasets,
+    }
+
+    # Calculate monthly income by top categories
+    monthly_income_by_category = defaultdict(
+        lambda: defaultdict(float)
+    )  # {month: {category: amount}}
+    for t in all_transactions:
+        if t.amount and t.amount > 0 and t.category and t.category != "Uncounted":
+            transaction_date = parse_date(t.date)
+            if not transaction_date:
+                continue
+            month_key = transaction_date.strftime("%Y-%m")
+            monthly_income_by_category[month_key][t.category] += t.amount
+
+    # Get top 5 income categories for monthly breakdown
+    top_income_categories = (
+        sorted(top_income, key=lambda x: x["total"], reverse=True)[:5]
+        if top_income
+        else []
+    )
+    top_income_cat_names = [cat["category"] for cat in top_income_categories]
+
+    # Build monthly income dataset
+    monthly_income_datasets = []
+    for category in top_income_cat_names:
+        data = [
+            monthly_income_by_category[month].get(category, 0)
+            for month in sorted_months
+        ]
+        monthly_income_datasets.append({"label": category, "data": data})
+
+    monthly_category_income_data = {
+        "labels": monthly_labels,
+        "datasets": monthly_income_datasets,
+    }
+
     return render(
         request,
         "dashboard/dashboard.html",
@@ -1148,6 +1216,11 @@ def dashboard(request):
             "top_spending_json": json.dumps(top_spending),
             "top_income_json": json.dumps(top_income),
             "monthly_chart_data": json.dumps(monthly_chart_data),
+            "monthly_category_expenses_data": json.dumps(
+                monthly_category_expenses_data
+            ),
+            "monthly_category_income_data": json.dumps(monthly_category_income_data),
+            "excluded_categories": excluded_categories,  # Add this for debugging
         },
     )
 

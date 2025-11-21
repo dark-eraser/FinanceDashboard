@@ -1,5 +1,13 @@
 """
 Django service for integrating semantic categorization with transaction processing.
+
+Categorization Rules (checked in order):
+1. Manual categorization (is_manually_categorized flag) → use as-is
+2. Keyword rules → special cases that bypass semantic analysis
+   - "debit account transfer" → "Savings" (confidence: 0.95)
+3. Existing high-confidence categories (>0.8) → reuse
+4. Semantic categorization → predict using AI model
+5. Default → "Uncategorized" if no prediction
 """
 import os
 import sys

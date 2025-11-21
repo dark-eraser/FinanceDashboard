@@ -6,7 +6,7 @@
 <!-- Hero Section -->
 <div class="mb-8">
   <h1 class="text-4xl font-bold text-gray-900 mb-2">
-    <i class="bi bi-speedometer2 text-indigo-600"></i>
+    <i class="bi text-indigo-600"></i>
     Financial Dashboard
   </h1>
   <p class="text-gray-600">
@@ -70,6 +70,51 @@
     </div>
   </div>
 </div>
+<!-- Month by Month Comparison Chart -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+  <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4 flex justify-between items-center">
+    <h2 class="text-xl font-bold text-white flex items-center">
+      <i class="bi bi-graph-up mr-2"></i>
+      Monthly Income vs Expenses
+    </h2>
+    <div class="flex items-center space-x-4">
+      <!-- Chart Type Toggle -->
+      <div class="flex space-x-2 bg-blue-600 rounded-lg p-1">
+        <button 
+          id="chartTypeLineBtn" 
+          class="px-3 py-1 rounded text-sm font-semibold text-white bg-blue-700 transition"
+          onclick="switchChartType('line')"
+        >
+          <i class="bi bi-graph-up mr-1"></i>Line
+        </button>
+        <button 
+          id="chartTypeBarBtn" 
+          class="px-3 py-1 rounded text-sm font-semibold text-blue-200 hover:bg-blue-600 transition"
+          onclick="switchChartType('bar')"
+        >
+          <i class="bi bi-bar-chart mr-1"></i>Bar
+        </button>
+      </div>
+      
+      <!-- Year Selector -->
+      <select 
+        id="yearSelector" 
+        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onchange="switchYear(this.value)"
+      >
+        <option value="">All Years</option>
+        <!-- Year options will be populated by JavaScript -->
+      </select>
+    </div>
+  </div>
+  <div class="p-6">
+    <div class="relative" style="height: 400px; position: relative;">
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+
 
 <!-- Main Content Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -168,21 +213,6 @@
     </div>
   </div>
 
-
-<!-- Monthly Expenses vs Income Chart -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-  <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4">
-    <h2 class="text-xl font-bold text-white flex items-center">
-      <i class="bi bi-graph-up mr-2"></i>
-      Expenses vs Income Over Time
-    </h2>
-  </div>
-  <div class="p-6">
-    <div class="relative" style="height: 400px; position: relative;">
-      <canvas id="monthlyChart"></canvas>
-    </div>
-  </div>
-</div>
 
   <!-- Quick Actions -->
   <div
@@ -564,6 +594,192 @@ function updateCategorySection(type, categories) {
   console.log('innerHTML set successfully for', type);
 }
 
+// Global variables for monthly chart
+let originalMonthlyData = {};
+let currentChartType = 'line';
+let selectedYear = '';
+
+// Populate year selector
+function populateYearSelector() {
+  const years = new Set();
+  if (originalMonthlyData.labels) {
+    originalMonthlyData.labels.forEach(label => {
+      const year = label.split('-')[0];
+      if (year) years.add(year);
+    });
+  }
+  
+  const yearSelect = document.getElementById('yearSelector');
+  const sortedYears = Array.from(years).sort().reverse();
+  
+  sortedYears.forEach(year => {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    yearSelect.appendChild(option);
+  });
+}
+
+// Filter chart data by year
+function filterDataByYear(year) {
+  if (!year) {
+    return {
+      labels: originalMonthlyData.labels,
+      expenses: originalMonthlyData.expenses,
+      income: originalMonthlyData.income
+    };
+  }
+  
+  const filtered = {
+    labels: [],
+    expenses: [],
+    income: []
+  };
+  
+  originalMonthlyData.labels.forEach((label, index) => {
+    if (label.startsWith(year)) {
+      filtered.labels.push(label);
+      filtered.expenses.push(originalMonthlyData.expenses[index]);
+      filtered.income.push(originalMonthlyData.income[index]);
+    }
+  });
+  
+  return filtered;
+}
+
+// Switch chart type
+function switchChartType(type) {
+  currentChartType = type;
+  
+  // Update button styling
+  const lineBtn = document.getElementById('chartTypeLineBtn');
+  const barBtn = document.getElementById('chartTypeBarBtn');
+  
+  if (type === 'line') {
+    lineBtn.classList.add('bg-blue-700');
+    lineBtn.classList.remove('text-blue-200', 'hover:bg-blue-600');
+    barBtn.classList.remove('bg-blue-700');
+    barBtn.classList.add('text-blue-200', 'hover:bg-blue-600');
+  } else {
+    barBtn.classList.add('bg-blue-700');
+    barBtn.classList.remove('text-blue-200', 'hover:bg-blue-600');
+    lineBtn.classList.remove('bg-blue-700');
+    lineBtn.classList.add('text-blue-200', 'hover:bg-blue-600');
+  }
+  
+  updateMonthlyChart();
+}
+
+// Switch year
+function switchYear(year) {
+  selectedYear = year;
+  updateMonthlyChart();
+}
+
+// Update monthly chart based on current type and year
+function updateMonthlyChart() {
+  const filteredData = filterDataByYear(selectedYear);
+  
+  if (window.monthlyChart && typeof window.monthlyChart.destroy === 'function') {
+    window.monthlyChart.destroy();
+  }
+  
+  const monthlyCtx = document.getElementById('monthlyChart');
+  if (!monthlyCtx) {
+    console.error('Monthly chart canvas element not found');
+    return;
+  }
+  
+  console.log('Creating chart with type:', currentChartType, 'year:', selectedYear, 'data points:', filteredData.labels.length);
+  
+  const chartConfig = {
+    type: currentChartType,
+    data: {
+      labels: filteredData.labels,
+      datasets: [
+        {
+          label: 'Expenses',
+          data: filteredData.expenses,
+          borderColor: 'rgb(239, 68, 68)',
+          backgroundColor: currentChartType === 'line' ? 'rgba(239, 68, 68, 0.1)' : 'rgb(239, 68, 68)',
+          borderWidth: currentChartType === 'line' ? 3 : 0,
+          fill: currentChartType === 'line',
+          tension: 0.4,
+          pointRadius: currentChartType === 'line' ? 5 : 0,
+          pointBackgroundColor: 'rgb(239, 68, 68)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointHoverRadius: 7
+        },
+        {
+          label: 'Income',
+          data: filteredData.income,
+          borderColor: 'rgb(34, 197, 94)',
+          backgroundColor: currentChartType === 'line' ? 'rgba(34, 197, 94, 0.1)' : 'rgb(34, 197, 94)',
+          borderWidth: currentChartType === 'line' ? 3 : 0,
+          fill: currentChartType === 'line',
+          tension: 0.4,
+          pointRadius: currentChartType === 'line' ? 5 : 0,
+          pointBackgroundColor: 'rgb(34, 197, 94)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointHoverRadius: 7
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 15,
+            font: { size: 12, weight: 'bold' }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: 12,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: function (context) {
+              return context.dataset.label + ': CHF ' + context.parsed.y.toFixed(2);
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          },
+          ticks: {
+            callback: function (value) {
+              return 'CHF ' + value.toFixed(0);
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  };
+  
+  window.monthlyChart = new Chart(monthlyCtx, chartConfig);
+}
+
 // Initialize the charts when page loads
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize spending chart
@@ -618,95 +834,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Initialize monthly expenses vs income chart
-  const monthlyCtx = document.getElementById('monthlyChart');
-  if (monthlyCtx) {
-    const monthlyData = JSON.parse('{{ monthly_chart_data|escapejs }}');
-    
-    window.monthlyChart = new Chart(monthlyCtx, {
-      type: 'line',
-      data: {
-        labels: monthlyData.labels,
-        datasets: [
-          {
-            label: 'Expenses',
-            data: monthlyData.expenses,
-            borderColor: 'rgb(239, 68, 68)',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 5,
-            pointBackgroundColor: 'rgb(239, 68, 68)',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointHoverRadius: 7
-          },
-          {
-            label: 'Income',
-            data: monthlyData.income,
-            borderColor: 'rgb(34, 197, 94)',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 5,
-            pointBackgroundColor: 'rgb(34, 197, 94)',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointHoverRadius: 7
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              usePointStyle: true,
-              padding: 15,
-              font: { size: 12, weight: 'bold' }
-            }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            padding: 12,
-            titleFont: { size: 14, weight: 'bold' },
-            bodyFont: { size: 13 },
-            callbacks: {
-              label: function (context) {
-                return context.dataset.label + ': CHF ' + context.parsed.y.toFixed(2);
-              }
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            },
-            ticks: {
-              callback: function (value) {
-                return 'CHF ' + value.toFixed(0);
-              }
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            }
-          }
-        }
-      }
-    });
+  // Store original monthly data for filtering (update global variable)
+  originalMonthlyData = JSON.parse('{{ monthly_chart_data|escapejs }}');
+  
+  console.log('Monthly data loaded:', originalMonthlyData);
+  // Convert Python list to JSON array for logging
+  var excludedCatsStr = '{{ excluded_categories | escapejs }}';
+  var excludedCats = [];
+  try {
+    // Parse the Python list representation to JavaScript array
+    excludedCats = JSON.parse(excludedCatsStr.replace(/'/g, '"'));
+  } catch (e) {
+    console.warn('Could not parse excluded categories:', excludedCatsStr);
+  }
+  console.log('Excluded categories from server:', excludedCats);
+  
+  // Validate data
+  if (!originalMonthlyData || !originalMonthlyData.labels || originalMonthlyData.labels.length === 0) {
+    console.error('No chart data available', originalMonthlyData);
   }
   
   // Initialize time filter from URL or session storage
@@ -716,6 +861,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const urlEndDate = urlParams.get('end_date');
   
   let activeFilter = urlTimeFilter || sessionStorage.getItem('timeFilter') || 'all';
+  
+  // Populate year selector and initialize chart on page load
+  populateYearSelector();
+  updateMonthlyChart();
   
   // Update button styles
   document.querySelectorAll('.time-filter-btn').forEach(btn => {
@@ -863,7 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(data => {
         console.log('Monthly response data:', data);
         if (data.success) {
-          updateMonthlyChart(data);
+          updateMonthlyChartWithData(data);
         } else {
           console.error('Failed to load monthly data:', data.error);
         }
@@ -873,8 +1022,8 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   }
 
-  // Update monthly chart with new data
-  function updateMonthlyChart(data) {
+  // Update monthly chart with new data from API
+  function updateMonthlyChartWithData(data) {
     if (window.monthlyChart && data.chart_data) {
       window.monthlyChart.data.labels = data.chart_data.labels;
       window.monthlyChart.data.datasets[0].data = data.chart_data.expenses;
