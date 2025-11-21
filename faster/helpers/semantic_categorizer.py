@@ -26,6 +26,10 @@ class SemanticCategorizer:
     # Keyword rules for common merchants
     # NOTE: Order matters! More specific rules should come first
     KEYWORD_RULES = {
+        "Savings": [
+            # Debit account transfer (transfers to/from savings accounts)
+            r"\bdebit account transfer\b",
+        ],
         "Uncounted": [
             # Currency exchanges
             r"\bexchanged to (eur|chf|usd|huf|cad)\b",
@@ -215,6 +219,10 @@ class SemanticCategorizer:
         for category, patterns in self.KEYWORD_RULES.items():
             for pattern in patterns:
                 if re.search(pattern, merchant_lower):
+                    # Debug logging
+                    print(
+                        f"[DEBUG] Keyword rule matched: '{merchant}' -> {category} (pattern: {pattern})"
+                    )
                     return category, 0.95  # High confidence for keyword matches
 
         return None, 0.0
