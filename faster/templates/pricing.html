@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-20 bg-gray-50 dark:bg-dark-bg min-h-screen">
+    <div class="container mx-auto px-4">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">Simple, Transparent Pricing</h1>
+            <p class="text-xl text-gray-500 dark:text-gray-400">Choose the plan that fits your financial journey. No hidden fees, cancel anytime.</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-8">
+            <!-- Free Tier -->
+            <div class="w-full md:w-1/3 max-w-sm">
+                <div class="bg-white dark:bg-dark-surface rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-dark-border transition-transform hover:-translate-y-1 duration-300 h-full flex flex-col">
+                    <div class="p-8">
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Starter</h3>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">Perfect for getting started with tracking.</p>
+                        <div class="flex items-baseline mb-6">
+                            <span class="text-5xl font-extrabold text-gray-900 dark:text-white">$0</span>
+                            <span class="text-gray-500 dark:text-gray-400 ml-2">/month</span>
+                        </div>
+                        <a href="{% url 'signup' %}" class="block w-full py-3 px-6 text-center rounded-lg border-2 border-primary-600 text-primary-600 font-semibold hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                            Get Started
+                        </a>
+                    </div>
+                    <div class="px-8 pb-8 flex-grow">
+                        <ul class="space-y-4">
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-3"></i>
+                                Manual CSV Uploads
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-3"></i>
+                                Basic Categorization
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-3"></i>
+                                1 Year History
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-3"></i>
+                                Standard Charts
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pro Tier -->
+            <div class="w-full md:w-1/3 max-w-sm relative">
+                <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary-500 to-purple-600 rounded-2xl transform rotate-1 scale-105 opacity-20 blur-lg"></div>
+                <div class="bg-white dark:bg-dark-surface rounded-2xl shadow-2xl overflow-hidden border-2 border-primary-500 relative z-10 transition-transform hover:-translate-y-1 duration-300 h-full flex flex-col">
+                    <div class="bg-primary-600 text-white text-center py-2 text-sm font-bold uppercase tracking-wider">
+                        Most Popular
+                    </div>
+                    <div class="p-8">
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pro</h3>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">For serious financial planning.</p>
+                        <div class="flex items-baseline mb-6">
+                            <span class="text-5xl font-extrabold text-gray-900 dark:text-white">$9</span>
+                            <span class="text-gray-500 dark:text-gray-400 ml-2">/month</span>
+                        </div>
+                        <a href="{% url 'signup' %}?plan=pro" class="block w-full py-3 px-6 text-center rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 shadow-lg hover:shadow-xl transition-all">
+                            Start Free Trial
+                        </a>
+                    </div>
+                    <div class="px-8 pb-8 flex-grow">
+                        <ul class="space-y-4">
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-primary-500 mr-3"></i>
+                                <strong>Everything in Starter</strong>
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-primary-500 mr-3"></i>
+                                Unlimited History
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-primary-500 mr-3"></i>
+                                Advanced Analytics & Trends
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-primary-500 mr-3"></i>
+                                AI-Powered Categorization
+                            </li>
+                            <li class="flex items-center text-gray-600 dark:text-gray-300">
+                                <i class="bi bi-check-circle-fill text-primary-500 mr-3"></i>
+                                Priority Support
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

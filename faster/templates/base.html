@@ -1,103 +1,201 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="h-full">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Finance Tracker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceTracker - Smart Personal Finance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Design System & Theming -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff', // Indigo 50
+                            100: '#e0e7ff', // Indigo 100
+                            500: '#6366f1', // Indigo 500
+                            600: '#4f46e5', // Indigo 600
+                            700: '#4338ca', // Indigo 700
+                        },
+                        dark: {
+                            bg: '#111827',      // Gray 900
+                            surface: '#1f2937', // Gray 800
+                            border: '#374151',  // Gray 700
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* CSS Variables for Theming */
+        :root {
+            --text-primary: #111827; /* gray-900 */
+            --text-secondary: #6b7280; /* gray-500 */
+            --text-muted: #9ca3af; /* gray-400 */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb; /* gray-50 */
+            --bg-surface: #ffffff;
+            --border-color: #e5e7eb; /* gray-200 */
+        }
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+        .dark {
+            --text-primary: #f9fafb; /* gray-50 */
+            --text-secondary: #9ca3af; /* gray-400 */
+            --text-muted: #6b7280; /* gray-500 */
+            --bg-primary: #0f172a; /* slate-900 */
+            --bg-secondary: #1e293b; /* slate-800 */
+            --bg-surface: #1e293b; /* slate-800 */
+            --border-color: #334155; /* slate-700 */
+        }
 
-  <!-- Bootstrap (for icons and some components) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #94a3b8;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #64748b;
-    }
-  </style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Animations */
+        @keyframes fade-in-down {
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-down { animation: fade-in-down 0.3s ease-out; }
+    </style>
+    
+    <!-- Theme Toggle Script -->
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
 </head>
 
-<body class="bg-gray-50">
-  <!-- Navigation -->
-  <nav class="bg-gradient-to-r from-indigo-600 to-purple-600 shadow-lg fixed w-full z-10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
-        <div class="flex items-center">
-          <a href="/" class="flex items-center space-x-3">
-            <i class="bi bi-wallet2 text-white text-2xl"></i>
-            <span class="text-white text-xl font-bold">Finance Tracker</span>
-          </a>
-        </div>
-        <div class="hidden md:flex items-center space-x-1">
-          <a href="/"
-            class="text-white hover:bg-white/10 px-4 py-2 rounded-lg transition duration-200 flex items-center space-x-2">
-            <i class="bi bi-house-door"></i>
-            <span>Home</span>
-          </a>
-          <a href="/expenses-by-category/"
-            class="text-white hover:bg-white/10 px-4 py-2 rounded-lg transition duration-200 flex items-center space-x-2">
-            <i class="bi bi-graph-down"></i>
-            <span>Expenses</span>
-          </a>
-          <a href="/income-by-category/"
-            class="text-white hover:bg-white/10 px-4 py-2 rounded-lg transition duration-200 flex items-center space-x-2">
-            <i class="bi bi-graph-up"></i>
-            <span>Income</span>
-          </a>
-          <a href="/expenses-vs-income/"
-            class="text-white hover:bg-white/10 px-4 py-2 rounded-lg transition duration-200 flex items-center space-x-2">
-            <i class="bi bi-bar-chart"></i>
-            <span>Analytics</span>
-          </a>
-          <a href="/monthly-budget/"
-            class="text-white hover:bg-white/10 px-4 py-2 rounded-lg transition duration-200 flex items-center space-x-2">
-            <i class="bi bi-calendar-month"></i>
-            <span>Budget</span>
-          </a>
-          <a href="/settings/"
-            class="text-white hover:bg-white/10 px-4 py-2 rounded-lg transition duration-200 flex items-center space-x-2">
-            <i class="bi bi-gear"></i>
-            <span>Settings</span>
-          </a>
-        </div>
-      </div>
-    </div>
-  </nav>
+<body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-200">
 
-  <!-- Main Content -->
-  <div class="pt-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {% block content %}{% endblock %}
-    </div>
-  </div>
+    <!-- Navigation -->
+    <nav class="bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md border-b border-gray-200 dark:border-dark-border fixed w-full z-50 transition-colors duration-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="{% url 'dashboard' %}" class="flex items-center gap-2 group">
+                        <div class="bg-primary-600 text-white p-1.5 rounded-lg shadow-sm group-hover:bg-primary-500 transition-colors">
+                            <i class="bi bi-wallet2 text-lg"></i>
+                        </div>
+                        <span class="font-bold text-xl tracking-tight text-gray-900 dark:text-white">Finance<span class="text-primary-600">Tracker</span></span>
+                    </a>
+                    
+                    <!-- Desktop Menu -->
+                    <div class="hidden md:block ml-10">
+                        <div class="flex items-baseline space-x-1">
+                            <a href="{% url 'dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Dashboard</a>
+                            <a href="{% url 'expenses_by_category' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Expenses</a>
+                            <a href="{% url 'income_by_category' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Income</a>
+                            <a href="{% url 'expenses_vs_income' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Analytics</a>
+                            <a href="{% url 'monthly_budget' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Budget</a>
+                        </div>
+                    </div>
+                </div>
 
-  <!-- Footer -->
-  <footer class="bg-white border-t border-gray-200 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <p class="text-center text-gray-500 text-sm">
-        &copy; 2025 Finance Tracker. Built with Django & Tailwind CSS.
-      </p>
-    </div>
-  </footer>
+                <!-- Right Side Actions -->
+                <div class="flex items-center gap-3">
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors focus:outline-none">
+                        <i class="bi bi-moon-stars hidden dark:block"></i>
+                        <i class="bi bi-sun-fill block dark:hidden text-yellow-500"></i>
+                    </button>
+
+                    <!-- Notifications -->
+                    <button class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors relative">
+                        <i class="bi bi-bell"></i>
+                        <span class="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white dark:border-dark-surface"></span>
+                    </button>
+
+                    <!-- Settings -->
+                    <a href="{% url 'settings' %}" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors" aria-label="Settings">
+                        <i class="bi bi-gear"></i>
+                    </a>
+
+                    <!-- Profile Dropdown (Simplified) -->
+                    <div class="relative ml-2">
+                        <button class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                            <div class="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-200 dark:border-primary-800">
+                                <span class="text-xs font-bold">JD</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        {% if messages %}
+        <div class="mb-8 space-y-3">
+            {% for message in messages %}
+            <div class="p-4 rounded-xl shadow-sm border {% if message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800{% else %}bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800{% endif %} flex items-center justify-between animate-fade-in-down backdrop-blur-sm">
+                <div class="flex items-center gap-3">
+                    <div class="p-1 rounded-full {% if message.tags == 'error' %}bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-200{% else %}bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-200{% endif %}">
+                        <i class="bi {% if message.tags == 'error' %}bi-exclamation-lg{% else %}bi-check-lg{% endif %} text-sm"></i>
+                    </div>
+                    <span class="font-medium">{{ message }}</span>
+                </div>
+                <button onclick="this.closest('.animate-fade-in-down').remove()" class="text-sm opacity-60 hover:opacity-100 transition-opacity p-1">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-dark-surface border-t border-gray-200 dark:border-dark-border mt-auto transition-colors duration-200">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-wallet2 text-gray-400"></i>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">
+                        &copy; {% now "Y" %} FinanceTracker. All rights reserved.
+                    </p>
+                </div>
+                <div class="flex space-x-6 text-gray-400">
+                    <a href="#" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"><i class="bi bi-github text-lg"></i></a>
+                    <a href="#" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"><i class="bi bi-twitter text-lg"></i></a>
+                    <a href="#" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors"><i class="bi bi-discord text-lg"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Theme Toggle Logic -->
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        
+        themeToggleBtn.addEventListener('click', function() {
+            // toggle icons inside button
+            if (localStorage.theme === 'dark') {
+                localStorage.theme = 'light';
+                document.documentElement.classList.remove('dark');
+            } else {
+                localStorage.theme = 'dark';
+                document.documentElement.classList.add('dark');
+            }
+        });
+    </script>
 </body>
-
 </html>

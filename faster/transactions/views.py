@@ -1,4 +1,8 @@
 """Helper functions for dashboard views"""
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
 
 
 def get_excluded_categories():
@@ -477,7 +481,7 @@ def expenses_vs_income(request):
         sankey_source.append(current_idx)
         sankey_target.append(0)
         sankey_value.append(amount)
-        sankey_color.append("rgba(34, 197, 94, 0.4)")  # Greenish
+        sankey_color.append("rgba(34, 197, 94, 0.6)")  # Greenish (Increased opacity)
         current_idx += 1
 
     # Expense Nodes (Indices N+1 to M)
@@ -493,7 +497,7 @@ def expenses_vs_income(request):
         sankey_source.append(0)
         sankey_target.append(current_idx)
         sankey_value.append(amount)
-        sankey_color.append("rgba(239, 68, 68, 0.4)")  # Reddish
+        sankey_color.append("rgba(239, 68, 68, 0.6)")  # Reddish (Increased opacity)
         current_idx += 1
 
     # Savings Node (if Income > Expenses)
@@ -507,7 +511,7 @@ def expenses_vs_income(request):
         sankey_source.append(0)
         sankey_target.append(current_idx)
         sankey_value.append(savings)
-        sankey_color.append("rgba(59, 130, 246, 0.4)")  # Blueish
+        sankey_color.append("rgba(59, 130, 246, 0.6)")  # Blueish (Increased opacity)
 
     sankey_data = {
         "label": sankey_labels,
@@ -1499,7 +1503,7 @@ def api_search_transactions(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_update_category(request, transaction_id):
+def api_update_category(request, transaction_id=None):
     """API endpoint to update a transaction's category"""
     import json
 
@@ -1508,6 +1512,14 @@ def api_update_category(request, transaction_id):
     try:
         data = json.loads(request.body)
         new_category = data.get("category", "")
+
+        if transaction_id is None:
+            transaction_id = data.get("transaction_id")
+
+        if not transaction_id:
+            return JsonResponse(
+                {"success": False, "error": "Transaction ID required"}, status=400
+            )
 
         # Use categorization service to record manual categorization
         try:
@@ -1542,6 +1554,45 @@ def api_update_category(request, transaction_id):
         )
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_bulk_categorize(request):
+    """API endpoint to bulk categorize transactions by merchant pattern"""
+    import json
+
+    from .categorization_service import TransactionCategorizationService
+    from .models import Transaction
+
+    try:
+        data = json.loads(request.body)
+        merchant_pattern = data.get("merchant_pattern")
+        category = data.get("category")
+
+        if not merchant_pattern or not category:
+            return JsonResponse(
+                {"success": False, "error": "Merchant pattern and category required"},
+                status=400,
+            )
+
+        categorization_service = TransactionCategorizationService()
+
+        # Find matching transactions
+        transactions = Transaction.objects.filter(
+            booking_text__icontains=merchant_pattern
+        )
+        count = 0
+
+        for t in transactions:
+            # Update each transaction
+            categorization_service.record_manual_categorization(t.id, category)
+            count += 1
+
+        return JsonResponse({"success": True, "updated_count": count})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 @require_http_methods(["POST"])
@@ -2321,3 +2372,43 @@ def api_budget_comparison(request):
 
         traceback.print_exc()
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+# --- SaaS Views ---
+
+
+def landing_page(request):
+    return render(request, "landing.html")
+
+
+def pricing_page(request):
+    return render(request, "pricing.html")
+
+
+def signup_view(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect("dashboard")
+    else:
+        form = UserCreationForm()
+    return render(request, "registration/signup.html", {"form": form})
+
+
+def login_view(request):
+    if request.method == "POST":
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect("dashboard")
+    else:
+        form = AuthenticationForm()
+    return render(request, "registration/login.html", {"form": form})
+
+
+def logout_view(request):
+    logout(request)
+    return redirect("landing")

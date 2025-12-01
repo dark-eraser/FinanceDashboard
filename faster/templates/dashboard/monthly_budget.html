@@ -14,7 +14,7 @@
 </div>
 
 <!-- Comparison with Toggle Buttons -->
-<div class="chart-container">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover:shadow-xl transition duration-300">
   <div class="flex flex-col gap-4">
     <div>
       <h3 class="text-lg font-semibold " style="color: var(--text-primary);">Compare Against Average</h3>
@@ -42,7 +42,7 @@
 <!-- Current Month Overview -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
   <!-- Month Spending Card (Dynamic) -->
-  <div class="chart-container">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
         <p class="text-sm font-medium  uppercase month-label" style="color: var(--text-secondary);">This Month's Spending</p>
@@ -58,7 +58,7 @@
   </div>
 
   <!-- Average Monthly Spending -->
-  <div class="chart-container">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
         <p class="text-sm font-medium  uppercase" style="color: var(--text-secondary);">Average / Month</p>
@@ -74,7 +74,7 @@
   </div>
 
   <!-- Difference Card (Dynamic) -->
-  <div class="chart-container">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
         <p class="text-sm font-medium  uppercase" style="color: var(--text-secondary);">Difference from Average</p>
@@ -93,14 +93,14 @@
 <!-- Average Spending by Category Chart -->
 <div class="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
   <!-- Bar Chart -->
-  <div class="chart-container">
-    <div class="chart-header">
-      <h2 class="chart-title">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover:shadow-xl transition duration-300">
+    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl">
+      <h2 class="text-lg font-semibold text-white flex items-center">
         <i class="bi bi-bar-chart-fill mr-2"></i>
         Average Spending by Category
       </h2>
     </div>
-    <div class="p-6">
+    <div class="">
       <div class="flex justify-center">
         <div class="w-full" style="height: 600px;">
           <canvas id="averageSpendingChart"></canvas>
@@ -110,17 +110,19 @@
   </div>
 
 <!-- Detailed Category Statistics Table -->
-<div class="chart-container">
-  <div class="chart-header">
-    <h2 class="chart-title">
-      <i class="bi bi-table mr-2"></i>
-      Category Spending Analysis
-    </h2>
-    <p class="text-green-100 text-sm mt-1">Historical averages and current month spending</p>
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300">
+  <div class="bg-gradient-to-r from-blue-500 to-cyan-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl flex justify-between items-center">
+    <div>
+      <h2 class="text-lg font-semibold text-white flex items-center">
+        <i class="bi bi-table mr-2"></i>
+        Category Spending Analysis
+      </h2>
+      <p class="text-blue-100 text-sm mt-1">Historical averages and current month spending</p>
+    </div>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full">
-      <thead style="background-color: var(--bg-secondary);" class="border-b border-gray-200">
+      <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <tr>
           <th class="px-6 py-3 text-left text-sm font-semibold " style="color: var(--text-primary);">Category</th>
           <th class="month-column px-6 py-3 text-right text-sm font-semibold " style="color: var(--text-primary);">This Month</th>
@@ -132,14 +134,14 @@
           <th class="px-6 py-3 text-right text-sm font-semibold " style="color: var(--text-primary);">Months Tracked</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-200">
+      <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
         {% for item in category_rows %}
           {% if item.is_current_over_budget %}
-            <tr class="category-row hover:bg-red-50 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
+            <tr class="category-row hover:bg-red-50 dark:hover:bg-red-900/20 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
           {% elif item.current_amount > 0 %}
-            <tr class="category-row hover:bg-green-50 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
+            <tr class="category-row hover:bg-green-50 dark:hover:bg-green-900/20 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
           {% else %}
-            <tr class="category-row hover:bg-gray-100 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
+            <tr class="category-row hover:bg-gray-100 dark:hover:bg-gray-700 transition" data-category="{{ item.category }}" data-current="{{ item.current_amount }}" data-previous="{{ item.previous_amount }}" data-current-over="{{ item.is_current_over_budget }}" data-previous-over="{{ item.is_previous_over_budget }}" data-current-diff="{{ item.current_difference }}" data-previous-diff="{{ item.previous_difference }}">
           {% endif %}
             <td class="px-6 py-4">
               <p class="font-medium " style="color: var(--text-primary);">{{ item.category }}</p>
@@ -226,14 +228,14 @@
 </div>
 
 <!-- Filters Section -->
-<div class="chart-container">
-  <div class="chart-header">
-    <h2 class="chart-title">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300">
+  <div class="bg-gradient-to-r from-gray-500 to-gray-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl">
+    <h2 class="text-lg font-semibold text-white flex items-center">
       <i class="bi bi-funnel mr-2"></i>
       Filters
     </h2>
   </div>
-  <div class="p-6">
+  <div class="">
     <form method="POST" class="space-y-4">
       {% csrf_token %}
       

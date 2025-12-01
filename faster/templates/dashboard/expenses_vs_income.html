@@ -7,45 +7,19 @@
 
 <!-- Header -->
 <div class="mb-8">
-  <h1 class="text-4xl font-bold text-gray-900 mb-2">
+  <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
     <i class="bi bi-graph-up-arrow text-indigo-600"></i>
     Analytics Dashboard
   </h1>
-  <p class="text-gray-600">Deep dive into your cash flow, spending habits, and recurring expenses.</p>
-</div>
-
-<!-- Active Filters Banner -->
-<div class="bg-white border-l-4 border-indigo-500 p-4 mb-8 rounded-lg shadow-sm flex items-center justify-between">
-  <div class="flex items-center">
-    <i class="bi bi-funnel-fill text-indigo-600 text-xl mr-3"></i>
-    <div>
-      <p class="font-semibold text-gray-800">Active Filters</p>
-      <p class="text-sm text-gray-600">
-        {% if selected_file_ids %}
-        {{ selected_file_ids|length }} file(s) selected
-        {% else %}
-        All files
-        {% endif %}
-        |
-        {% if selected_currencies %}
-        {{ selected_currencies|join:", " }}
-        {% else %}
-        All currencies
-        {% endif %}
-      </p>
-    </div>
-  </div>
-  <a href="{% url 'settings' %}" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">
-    Change Filters &rarr;
-  </a>
+  <p class="text-gray-600 dark:text-gray-400">Deep dive into your cash flow, spending habits, and recurring expenses.</p>
 </div>
 
 <!-- Main Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
 
   <!-- Sankey Diagram (Cash Flow) -->
-  <div class="lg:col-span-2 bg-white rounded-xl shadow-md overflow-hidden">
-    <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+  <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
       <h2 class="text-xl font-bold text-white flex items-center">
         <i class="bi bi-diagram-3-fill mr-2"></i>
         Cash Flow Visualization
@@ -53,15 +27,15 @@
     </div>
     <div class="p-4">
       <div id="sankey-chart" class="w-full h-[500px]"></div>
-      <p class="text-xs text-gray-500 text-center mt-2">
+      <p class="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
         Visualizes the flow from Income Sources &rarr; Budget &rarr; Expenses & Savings
       </p>
     </div>
   </div>
 
   <!-- Subscription Tracker -->
-  <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col">
-    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
       <h2 class="text-xl font-bold text-white flex items-center">
         <i class="bi bi-arrow-repeat mr-2"></i>
         Recurring Expenses
@@ -69,16 +43,16 @@
     </div>
     <div class="p-0 flex-1 overflow-y-auto max-h-[500px]">
       {% if subscriptions %}
-      <div class="divide-y divide-gray-100">
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
         {% for sub in subscriptions %}
-        <div class="p-4 hover:bg-gray-50 transition">
+        <div class="p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition">
           <div class="flex justify-between items-start">
             <div>
-              <h3 class="font-semibold text-gray-800 text-sm">{{ sub.name|truncatechars:25 }}</h3>
-              <p class="text-xs text-gray-500">{{ sub.count }} payments detected</p>
+              <h3 class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ sub.name|truncatechars:25 }}</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ sub.count }} payments detected</p>
             </div>
             <div class="text-right">
-              <p class="font-bold text-gray-900">CHF {{ sub.avg_amount|floatformat:2 }}</p>
+              <p class="font-bold text-gray-900 dark:text-white">CHF {{ sub.avg_amount|floatformat:2 }}</p>
               <p class="text-xs text-gray-400">/ month (est)</p>
             </div>
           </div>
@@ -86,21 +60,21 @@
         {% endfor %}
       </div>
       {% else %}
-      <div class="p-8 text-center text-gray-500">
+      <div class="p-8 text-center text-gray-500 dark:text-gray-400">
         <i class="bi bi-search text-3xl mb-2 block"></i>
         No recurring subscriptions detected in this period.
       </div>
       {% endif %}
     </div>
-    <div class="bg-gray-50 p-3 text-center border-t border-gray-100">
-      <p class="text-xs text-gray-500">Based on repeated transactions with similar amounts</p>
+    <div class="bg-gray-50 dark:bg-white/5 p-3 text-center border-t border-gray-100 dark:border-gray-700">
+      <p class="text-xs text-gray-500 dark:text-gray-400">Based on repeated transactions with similar amounts</p>
     </div>
   </div>
 </div>
 
 <!-- Spending Heatmap -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-  <div class="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
+  <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4">
     <h2 class="text-xl font-bold text-white flex items-center">
       <i class="bi bi-calendar-week-fill mr-2"></i>
       Daily Spending Intensity
@@ -112,37 +86,37 @@
 </div>
 
 <!-- Transactions Table (Collapsible) -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden mb-24">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-24">
   <button onclick="toggleSection('transactions')"
-    class="w-full bg-gray-100 hover:bg-gray-200 px-6 py-4 flex items-center justify-between transition duration-200">
-    <h2 class="text-lg font-bold text-gray-700 flex items-center">
+    class="w-full bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-4 flex items-center justify-between transition duration-200">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-gray-200 flex items-center">
       <i class="bi bi-list-ul mr-2"></i>
       Detailed Transactions List
     </h2>
-    <i class="bi bi-chevron-right text-gray-600 text-xl" id="transactions-icon"></i>
+    <i class="bi bi-chevron-right text-gray-600 dark:text-gray-400 text-xl" id="transactions-icon"></i>
   </button>
   <div id="transactions-content" class="hidden p-0">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-white/5">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {% for tx in transactions %}
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tx.Date }}</td>
-            <td class="px-6 py-4 text-sm text-gray-900">{{ tx.Booking_text|truncatechars:50 }}</td>
+          <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ tx.Date }}</td>
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-200">{{ tx.Booking_text|truncatechars:50 }}</td>
             <td
-              class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold {% if tx.Amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold {% if tx.Amount < 0 %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %}">
               {{ tx.Amount|floatformat:2 }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                 {{ tx.Category }}
               </span>
             </td>
@@ -187,15 +161,21 @@
 
   // --- Sankey Chart Initialization ---
   function initSankey() {
+    // Detect Dark Mode (check both system preference and HTML class)
+    const isDarkMode = document.documentElement.classList.contains('dark') || 
+                      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    const textColor = isDarkMode ? '#f3f4f6' : '#374151'; // gray-100 vs gray-700
+
     const data = {
       type: "sankey",
       orientation: "h",
       node: {
         pad: 15,
         thickness: 20,
-        line: { color: "black", width: 0.5 },
+        line: { color: "transparent", width: 0.5 },
         label: sankeyData.label,
-        color: "rgba(79, 70, 229, 0.8)" // Default node color
+        color: isDarkMode ? "rgba(99, 102, 241, 0.8)" : "rgba(79, 70, 229, 0.8)" // Indigo 500/600
       },
       link: {
         source: sankeyData.source,
@@ -206,7 +186,7 @@
     };
 
     const layout = {
-      font: { size: 12, family: "Inter, sans-serif" },
+      font: { size: 12, family: "Inter, sans-serif", color: textColor },
       margin: { l: 10, r: 10, t: 10, b: 10 },
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)"
@@ -222,53 +202,43 @@
     // X-axis: Week of Year, Y-axis: Day of Week
 
     const dates = Object.keys(heatmapDataRaw).sort();
-    const zValues = [];
-    const xValues = []; // Week numbers
-    const yValues = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    // Initialize matrix
-    // We need to map dates to (week, day) coordinates
-    // This is a simplified approach; for a perfect calendar we might need a library like Cal-Heatmap
-    // But let's try a simple scatter plot with color scale first, it might look better and be easier
-
-    const xDates = [];
-    const yDay = []; // Just 1 for 1D strip? No, let's do a bar chart over time?
-    // The user asked for a heatmap.
-    // Let's do a standard heatmap: Month on X, Day of Month on Y?
-
-    // Better approach for "Spending Intensity":
-    // X: Date, Y: "Spending", Color: Amount? No that's a bar chart.
-    // Heatmap: X = Month, Y = Day of Month (1-31), Color = Amount.
-
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
-    const zMatrix = Array(31).fill().map(() => Array(12).fill(0)); // 31 rows (days), 12 cols (months)
+    const zMatrix = new Array(31).fill().map(() => new Array(12).fill(0)); // 31 rows (days), 12 cols (months)
     // Note: This aggregates all years if multiple years selected.
 
-    dates.forEach(dateStr => {
+    for (const dateStr of dates) {
       const date = new Date(dateStr);
       const month = date.getMonth(); // 0-11
       const day = date.getDate() - 1; // 0-30
       zMatrix[day][month] += heatmapDataRaw[dateStr];
-    });
+    }
+
+    // Detect Dark Mode
+    const isDarkMode = document.documentElement.classList.contains('dark') || 
+                      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    const textColor = isDarkMode ? '#f3f4f6' : '#374151'; // gray-100 vs gray-700
 
     const data = [{
       z: zMatrix,
       x: months,
       y: days,
       type: 'heatmap',
-      colorscale: 'Reds',
+      colorscale: isDarkMode ? 'Hot' : 'Reds', // Use brighter colors in dark mode
+      reversescale: isDarkMode, // Hot scale is usually dark-to-light, we might want light-to-dark or vice versa
       hoverongaps: false,
       hovertemplate: 'Month: %{x}<br>Day: %{y}<br>Total: CHF %{z:,.2f}<extra></extra>'
     }];
 
     const layout = {
       margin: { l: 50, r: 20, t: 20, b: 50 },
-      yaxis: { title: 'Day of Month', dtick: 2 },
-      xaxis: { title: 'Month' },
+      yaxis: { title: 'Day of Month', dtick: 2, color: textColor },
+      xaxis: { title: 'Month', color: textColor },
       paper_bgcolor: "rgba(0,0,0,0)",
-      plot_bgcolor: "rgba(0,0,0,0)"
+      plot_bgcolor: "rgba(0,0,0,0)",
+      font: { color: textColor }
     };
 
     Plotly.newPlot('heatmap-chart', data, layout, { displayModeBar: false, responsive: true });
@@ -282,6 +252,20 @@
     // Initialize Time Filter UI
     const activeFilter = sessionStorage.getItem('timeFilter') || 'all';
     updateTimeFilterUI(activeFilter);
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.attributeName === "class") {
+          initSankey();
+          initHeatmap();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true
+    });
   });
 
   // --- Helper Functions ---

@@ -3,364 +3,277 @@
 {% csrf_token %}
 
 {% block content %}
-<div class="mb-8">
-  <h1 class="text-4xl font-bold text-primary mb-2" style="color: var(--text-primary)">
-    <i class="bi bi-gear text-indigo-600"></i>
-    Settings
-  </h1>
-  <p class="text-secondary" style="color: var(--text-secondary)"">
-    Manage your application settings, data sources, and preferences.
-  </p>
-</div>
-
-<!-- Tab Navigation -->
-<div class="mb-8">
-  <div class="flex space-x-1 border-b border-gray-200 bg-surface rounded-lg" style="background-color: var(--bg-surface)">
-    <button
-      class="settings-tab px-6 py-3 font-medium border-b-2 transition-colors duration-200 border-indigo-600 text-indigo-600 bg-secondary active" style="background-color: var(--bg-secondary)"
-      data-tab="data-sources">
-      <i class="bi bi-database mr-2"></i>Data Sources
-    </button>
-    <button
-      class="settings-tab px-6 py-3 font-medium border-b-2 border-transparent text-secondary" style="color: var(--text-secondary)" hover:border-gray-300 transition"
-      data-tab="transactions">
-      <i class="bi bi-arrow-left-right mr-2"></i>Transactions
-    </button>
-    <button
-      class="settings-tab px-6 py-3 font-medium border-b-2 border-transparent text-secondary" style="color: var(--text-secondary)" hover:border-gray-300 transition"
-      data-tab="preferences">
-      <i class="bi bi-sliders mr-2"></i>Preferences
-    </button>
+<div class="max-w-7xl mx-auto">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Manage your application preferences and data.</p>
   </div>
-</div>
 
-<!-- Tab 1: Data Sources (Upload + File Selection) -->
-<div id="data-sources-tab" class="settings-content">
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="flex flex-col md:flex-row gap-8">
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-64 flex-shrink-0">
+      <nav class="space-y-1 sticky top-6">
+        <button
+          class="settings-tab w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center active bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+          data-tab="general">
+          <i class="bi bi-sliders mr-3"></i>General
+        </button>
+        <button
+          class="settings-tab w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+          data-tab="data">
+          <i class="bi bi-database mr-3"></i>Data Management
+        </button>
+        <button
+          class="settings-tab w-full text-left px-4 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+          data-tab="categorization">
+          <i class="bi bi-tags mr-3"></i>Categorization
+        </button>
+      </nav>
+    </aside>
 
-    <!-- Upload Section -->
-    <div class="bg-surface rounded-xl shadow-md overflow-hidden h-full" style="background-color: var(--bg-surface)">
-      <div class="chart-header">
-        <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-          <i class="bi bi-cloud-upload mr-2"></i>
-          Upload Bank Statements
-        </h2>
-      </div>
-      <div class="p-6">
-        <div
-          class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-8 text-center cursor-pointer hover:bg-blue-100 transition h-64 flex flex-col justify-center items-center"
-          id="dropZone">
-          <i class="bi bi-file-earmark-arrow-up text-5xl text-blue-500 mb-4"></i>
-          <p class="text-gray-700 font-medium text-lg">Drop CSV files here or click to select</p>
-          <p class="text-sm text-muted mt-2" style="color: var(--text-muted)">Supported formats: ZKB, Revolut, UBS</p>
-          <input type="file" id="fileInput" multiple accept=".csv" class="hidden">
-        </div>
-        <div id="uploadStatus" class="mt-4"></div>
-      </div>
-    </div>
+    <!-- Main Content -->
+    <main class="flex-1 min-w-0 space-y-6">
 
-    <!-- Active Files Section -->
-    <div class="bg-surface rounded-xl shadow-md overflow-hidden h-full" style="background-color: var(--bg-surface)">
-      <div class="chart-header">
-        <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-          <i class="bi bi-check-circle mr-2"></i>
-          Active Data Sources
-        </h2>
-        <p class="text-green-100 text-sm mt-1">Select which files to include in your dashboard</p>
-      </div>
-      <div class="p-6">
-        {% if files %}
-        <form method="POST" class="space-y-4">
-          {% csrf_token %}
-          <input type="hidden" name="form_type" value="files">
-          <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
-            {% for file in files %}
-            <label
-              class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-secondary" style="background-color: var(--bg-secondary)" cursor-pointer transition group">
-              <input type="checkbox" name="file" value="{{ file.id }}"
-               {% if file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
-               class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
-              <div class="ml-3 flex-1">
-                <span class="font-medium text-primary block" style="color: var(--text-primary)">{{ file.name }}</span>
-                <span class="text-xs text-muted" style="color: var(--text-muted)"">Uploaded: {{ file.uploaded_at|date:"M d, Y H:i" }}</span>
+      <!-- General Tab -->
+      <div id="general-tab" class="settings-content space-y-6">
+        <!-- Currencies -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Currencies</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Select currencies to display in your dashboard.</p>
+          </div>
+          <div class="p-6">
+            {% if all_currencies %}
+            <form method="POST" class="space-y-6">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="currencies">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% for currency in all_currencies %}
+                <label
+                  class="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition">
+                  <input type="checkbox" name="currency" value="{{ currency }}"
+                  {% if currency in selected_currencies %}checked{% endif %}
+                  class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+                  <span class="ml-3 font-medium text-gray-900 dark:text-white">{{ currency }}</span>
+                </label>
+                {% endfor %}
               </div>
-              <button type="button"
-                class="delete-file-btn text-gray-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100"
-                data-file-id="{{ file.id }}" title="Delete file">
-                <i class="bi bi-trash"></i>
+              <div class="flex justify-end">
+                <button type="submit"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+            {% else %}
+            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+              No currencies found.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Management Tab -->
+      <div id="data-tab" class="settings-content hidden space-y-6">
+        
+        <!-- Upload Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Upload Statements</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Import new bank statements (CSV).</p>
+          </div>
+          <div class="p-6">
+            <div
+              class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition flex flex-col justify-center items-center"
+              id="dropZone">
+              <i class="bi bi-cloud-upload text-4xl text-gray-400 mb-3"></i>
+              <p class="text-gray-700 dark:text-gray-300 font-medium">Click to upload or drag and drop</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Supported: ZKB, Revolut, UBS</p>
+              <input type="file" id="fileInput" multiple accept=".csv" class="hidden">
+            </div>
+            <div id="uploadStatus" class="mt-4"></div>
+          </div>
+        </div>
+
+        <!-- Active Files Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Active Data Sources</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Manage uploaded files.</p>
+          </div>
+          <div class="p-0">
+            {% if files %}
+            <form method="POST">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="files">
+              <div class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+                {% for file in files %}
+                <label class="flex items-center px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition group">
+                  <input type="checkbox" name="file" value="{{ file.id }}"
+                   {% if file.id|stringformat:"s" in selected_file_ids %}checked{% endif %}
+                   class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+                  <div class="ml-4 flex-1">
+                    <span class="text-sm font-medium text-gray-900 dark:text-white block">{{ file.name }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Uploaded: {{ file.uploaded_at|date:"M d, Y" }}</span>
+                  </div>
+                  <button type="button"
+                    class="delete-file-btn text-gray-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100 p-2"
+                    data-file-id="{{ file.id }}" title="Delete file">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </label>
+                {% endfor %}
+              </div>
+              <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                <button type="submit"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm text-sm">
+                  Update Selection
+                </button>
+              </div>
+            </form>
+            {% else %}
+            <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+              No files uploaded yet.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Categorization Tab -->
+      <div id="categorization-tab" class="settings-content hidden space-y-6">
+        
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+            <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="categorization-rate">-</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Categorized</div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+            <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="high-confidence-count">-</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">High Conf.</div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+            <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" id="medium-confidence-count">-</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Med Conf.</div>
+          </div>
+          <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="manual-corrections-count">-</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Manual</div>
+          </div>
+        </div>
+
+        <!-- Smart Rules / Search -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Categorization Rules</h2>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Search and categorize transactions.</p>
+            </div>
+            <button id="recategorize-btn"
+              class="text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition">
+              <i class="bi bi-arrow-clockwise mr-1"></i> Re-run AI
+            </button>
+          </div>
+          <div class="p-6 space-y-4">
+            <div id="recategorize-status" class="hidden text-sm"></div>
+            
+            <div class="flex flex-col md:flex-row gap-3">
+              <input type="text" id="merchant-search" placeholder="Merchant name..."
+                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
+              <input type="text" id="category-search" placeholder="Category..."
+                class="md:w-48 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
+              <input type="text" id="amount-search" placeholder="Amount..."
+                class="md:w-32 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
+              <button id="search-merchant-btn"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                Search
               </button>
-            </label>
-            {% endfor %}
-          </div>
-          <button type="submit"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">
-            Update Active Sources
-          </button>
-        </form>
-        {% else %}
-        <div class="text-center py-12">
-          <i class="bi bi-folder2-open text-4xl text-gray-300 mb-3"></i>
-          <p class="text-muted" style="color: var(--text-muted)"">No files uploaded yet.</p>
-        </div>
-        {% endif %}
-      </div>
-    </div>
+            </div>
 
+            <div id="search-results" class="hidden space-y-2">
+              <div id="transactions-list" class="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg"></div>
+              <button id="hide-search-btn" class="text-sm text-gray-500 hover:text-gray-700 underline">Hide Results</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review Needed -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Review Needed</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Transactions with low confidence scores.</p>
+          </div>
+          <div class="p-6">
+            <button id="view-low-confidence-btn"
+              class="w-full border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 px-4 py-2 rounded-lg font-medium transition mb-4">
+              Load Low Confidence Transactions
+            </button>
+
+            <div id="low-confidence-container" class="hidden space-y-4">
+              <div id="low-confidence-transactions" class="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg"></div>
+              <button id="hide-low-confidence-btn" class="text-sm text-gray-500 hover:text-gray-700 underline">Hide</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Excluded Categories -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Excluded Categories</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Hide these from dashboard charts.</p>
+          </div>
+          <div class="p-6">
+            {% if all_categories %}
+            <form method="POST" id="excluded-categories-form">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="excluded_categories">
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto mb-4">
+                {% for category in all_categories %}
+                <label class="flex items-center space-x-2 cursor-pointer">
+                  <input type="checkbox" name="excluded_category" value="{{ category }}"
+                  {% if category in excluded_categories %}checked{% endif %}
+                  class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
+                  <span class="text-sm text-gray-700 dark:text-gray-300 truncate" title="{{ category }}">{{ category }}</span>
+                </label>
+                {% endfor %}
+              </div>
+              <button type="submit"
+                class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium text-sm transition">
+                Update Exclusions
+              </button>
+            </form>
+            <div id="excluded-status" class="mt-4 hidden p-3 rounded-lg text-sm"></div>
+            {% else %}
+            <p class="text-gray-500">No categories available.</p>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+    </main>
   </div>
 </div>
-
-<!-- Tab 2: Transactions (formerly Categorization) -->
-<div id="transactions-tab" class="settings-content hidden">
-  <div class="space-y-6">
-
-    <!-- Smart Categorization Rules (Top, Full Width) -->
-    <div class="bg-surface rounded-xl shadow-md overflow-hidden" style="background-color: var(--bg-surface)">
-      <div class="chart-header">
-        <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-          <i class="bi bi-hand-index mr-2"></i>
-          Smart Categorization Rules
-        </h2>
-      </div>
-      <div class="p-6">
-        <p class="text-secondary" style="color: var(--text-secondary)" mb-4 text-sm">
-          Search and manually categorize transactions. Changes apply to all matching merchants.
-        </p>
-
-        <div class="space-y-3">
-          <input type="text" id="merchant-search" placeholder="Search by merchant name..."
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          <div class="flex gap-2">
-            <input type="text" id="category-search" placeholder="Category..."
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-            <input type="text" id="amount-search" placeholder="Amount..."
-              class="w-24 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-          </div>
-          <button id="search-merchant-btn"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">
-            Search
-          </button>
-
-          <div id="search-results" class="hidden space-y-2 mt-4">
-            <div id="transactions-list" class="max-h-64 overflow-y-auto border rounded-lg"></div>
-            <button id="hide-search-btn"
-              class="w-full bg-secondary" style="background-color: var(--bg-secondary);" hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition">
-              Hide Results
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Secondary Grid (Stats, Review, Excluded) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <!-- Column 1: Categorization Statistics -->
-      <div class="bg-surface rounded-xl shadow-md overflow-hidden h-full" style="background-color: var(--bg-surface)">
-        <div class="chart-header">
-          <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-            <i class="bi bi-bar-chart mr-2"></i>
-            Stats
-          </h2>
-        </div>
-        <div class="p-6 flex flex-col h-full">
-          <div class="space-y-4 mb-6 flex-1">
-            <div class="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <div class="text-2xl font-bold text-blue-600" id="categorization-rate">-</div>
-              <div class="text-xs text-secondary" style="color: var(--text-secondary)" mt-1 font-medium">Categorization Rate</div>
-            </div>
-            <div class="text-center p-3 bg-green-50 rounded-lg border border-green-100">
-              <div class="text-2xl font-bold text-green-600" id="high-confidence-count">-</div>
-              <div class="text-xs text-secondary" style="color: var(--text-secondary)" mt-1 font-medium">High Confidence</div>
-            </div>
-            <div class="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-              <div class="text-2xl font-bold text-yellow-600" id="medium-confidence-count">-</div>
-              <div class="text-xs text-secondary" style="color: var(--text-secondary)" mt-1 font-medium">Medium Confidence</div>
-            </div>
-            <div class="text-center p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <div class="text-2xl font-bold text-purple-600" id="manual-corrections-count">-</div>
-              <div class="text-xs text-secondary" style="color: var(--text-secondary)" mt-1 font-medium">Manual Corrections</div>
-            </div>
-          </div>
-
-          <button id="recategorize-btn"
-            class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2 shadow-sm text-sm">
-            <i class="bi bi-arrow-clockwise"></i>
-            <span>Re-categorize All</span>
-          </button>
-
-          <div id="recategorize-status" class="mt-4 hidden text-sm"></div>
-        </div>
-      </div>
-
-      <!-- Column 2: Low Confidence Review -->
-      <div class="bg-surface rounded-xl shadow-md overflow-hidden h-full" style="background-color: var(--bg-surface)">
-        <div class="chart-header">
-          <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-            <i class="bi bi-exclamation-triangle mr-2"></i>
-            Review Needed
-          </h2>
-        </div>
-        <div class="p-6">
-          <p class="text-secondary" style="color: var(--text-secondary)" mb-4 text-sm">Review transactions where the AI was unsure.</p>
-          <button id="view-low-confidence-btn"
-            class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2 mb-4 shadow-sm">
-            <i class="bi bi-eye"></i>
-            <span id="low-confidence-btn-text">Load Transactions</span>
-          </button>
-
-          <div id="low-confidence-container" class="hidden space-y-4">
-            <div id="low-confidence-transactions" class="max-h-96 overflow-y-auto">
-              <!-- Will be populated by JavaScript -->
-            </div>
-            <button id="hide-low-confidence-btn"
-              class="w-full bg-secondary" style="background-color: var(--bg-secondary);" hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition">
-              Hide
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Column 3: Excluded Categories -->
-      <div class="bg-surface rounded-xl shadow-md overflow-hidden h-full" style="background-color: var(--bg-surface)">
-        <div class="chart-header">
-          <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-            <i class="bi bi-ban mr-2"></i>
-            Excluded
-          </h2>
-        </div>
-        <div class="p-6">
-          <p class="text-secondary" style="color: var(--text-secondary)" mb-4 text-sm">Hide from dashboard graphs.</p>
-          {% if all_categories %}
-          <form method="POST" id="excluded-categories-form" class="space-y-4">
-            {% csrf_token %}
-            <input type="hidden" name="form_type" value="excluded_categories">
-            <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
-              {% for category in all_categories %}
-              <label
-                class="flex items-center p-2 border border-gray-200 rounded-lg hover:bg-red-50 cursor-pointer transition">
-                <input type="checkbox" name="excluded_category" value="{{ category }}"
-                {% if category in excluded_categories %}checked{% endif %}
-                class="w-4 h-4 text-red-600 rounded focus:ring-red-500">
-                <span class="ml-2 text-sm font-medium text-primary truncate" style="color: var(--text-primary)" title="{{ category }}">{{ category }}</span>
-              </label>
-              {% endfor %}
-            </div>
-            <button type="submit"
-              class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm mt-4">
-              Update
-            </button>
-          </form>
-          <div id="excluded-status" class="mt-4 hidden p-3 rounded-lg"></div>
-          {% else %}
-          <p class="text-secondary" style="color: var(--text-secondary)" text-center py-8">No categories available.</p>
-          {% endif %}
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Info Box -->
-    <div class="bg-blue-50 rounded-xl border border-blue-200 overflow-hidden">
-      <button id="info-toggle"
-        class="w-full text-left flex items-center justify-between p-4 hover:bg-blue-100 transition">
-        <span class="flex items-center font-medium text-blue-900">
-          <i class="bi bi-info-circle mr-2"></i>
-          How Categorization Works
-        </span>
-        <i class="bi bi-chevron-down text-blue-900 transition-transform" id="info-icon"></i>
-      </button>
-
-      <div id="info-content" class="hidden p-4 border-t border-blue-200 bg-surface" style="background-color: var(--bg-surface)"">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <h4 class="font-semibold text-blue-900 mb-2">1. Merchant Mapping</h4>
-            <p class="text-sm text-secondary" style="color: var(--text-secondary)"">Exact matches from known merchants. 100% confidence.</p>
-          </div>
-          <div>
-            <h4 class="font-semibold text-blue-900 mb-2">2. Keyword Rules</h4>
-            <p class="text-sm text-secondary" style="color: var(--text-secondary)"">Pattern matching for common services (Netflix, Spotify). 95% confidence.
-            </p>
-          </div>
-          <div>
-            <h4 class="font-semibold text-blue-900 mb-2">3. AI Semantic Matching</h4>
-            <p class="text-sm text-secondary" style="color: var(--text-secondary)"">AI analysis of transaction text. 40-90% confidence.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Tab 3: Preferences -->
-<div id="preferences-tab" class="settings-content hidden">
-  <div class="max-w-2xl mx-auto">
-    <!-- Currencies Section -->
-    <div class="bg-surface rounded-xl shadow-md overflow-hidden" style="background-color: var(--bg-surface)">
-      <div class="chart-header">
-        <h2 class="text-xl font-bold" style="color: var(--text-primary);" flex items-center">
-          <i class="bi bi-currency-exchange mr-2"></i>
-          Display Currencies
-        </h2>
-        <p class="text-teal-100 text-sm mt-1">Choose which currencies to display in your dashboard</p>
-      </div>
-      <div class="p-6">
-        {% if all_currencies %}
-        <form method="POST" class="space-y-6">
-          {% csrf_token %}
-          <input type="hidden" name="form_type" value="currencies">
-          <div class="space-y-3">
-            {% for currency in all_currencies %}
-            <label
-              class="flex items-center p-4 border border-gray-200 rounded-xl hover:bg-teal-50 cursor-pointer transition group">
-              <input type="checkbox" name="currency" value="{{ currency }}"
-              {% if currency in selected_currencies %}checked{% endif %}
-              class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500">
-              <span class="ml-4 font-medium text-primary text-lg" style="color: var(--text-primary)">{{ currency }}</span>
-            </label>
-            {% endfor %}
-          </div>
-          <button type="submit"
-            class="w-full bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-medium transition shadow-sm text-lg">
-            Save Preferences
-          </button>
-        </form>
-        {% else %}
-        <div class="text-center py-12">
-          <i class="bi bi-cash-coin text-4xl text-gray-300 mb-3"></i>
-          <p class="text-muted" style="color: var(--text-muted)"">No currencies found in your transactions.</p>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
 
 <style>
-  .settings-tab.active {
-    border-bottom-color: #4f46e5;
-    color: #4f46e5;
-    background-color: #f3f4f6;
-  }
-
   /* Custom scrollbar for lists */
   ::-webkit-scrollbar {
     width: 8px;
   }
-
   ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+    background: transparent;
   }
-
   ::-webkit-scrollbar-thumb {
-    background: #c7c7c7;
+    background: #d1d5db;
     border-radius: 4px;
   }
-
+  .dark ::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
   ::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: #9ca3af;
   }
 </style>
 
@@ -371,10 +284,10 @@
   try {
     // Parse Django list representation to JavaScript array
     globalCategoryOptions = allCategoriesJson
-      .replace(/^[\[\s]+/, '')  // Remove opening bracket and spaces
+      .replace(/^[[\s]+/, '')  // Remove opening bracket and spaces
       .replace(/[\]\s]+$/, '')  // Remove closing bracket and spaces
       .split(',')
-      .map(cat => cat.trim().replace(/^['"]|['"]$/g, ''))  // Remove quotes
+      .map(cat => cat.trim().replace(/(^['"])|(['"]$)/g, ''))  // Remove quotes
       .filter(cat => cat.length > 0);
   } catch (e) {
     console.warn('Failed to parse categories, using fallback');
@@ -453,7 +366,7 @@
   `;
   document.head.appendChild(style);
 
-  console.log('Settings page JavaScript loaded - Version 3.0 (Redesign)');
+  console.log('Settings page JavaScript loaded - Version 4.0 (Sidebar Redesign)');
 
   // Helper function to get CSRF token from cookie
   function getCookie(name) {
@@ -483,23 +396,19 @@
 
       // Remove active class from all tabs
       document.querySelectorAll('.settings-tab').forEach(t => {
-        t.classList.remove('active');
-        t.style.borderBottomColor = 'transparent';
-        t.style.color = '#4b5563';
-        t.style.backgroundColor = 'transparent';
+        t.classList.remove('active', 'bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-900/20', 'dark:text-indigo-300');
+        t.classList.add('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-50', 'dark:hover:bg-gray-800');
       });
 
       // Show selected tab
       document.getElementById(tabName + '-tab').classList.remove('hidden');
 
       // Add active class to clicked tab
-      this.classList.add('active');
-      this.style.borderBottomColor = '#4f46e5';
-      this.style.color = '#4f46e5';
-      this.style.backgroundColor = '#f3f4f6';
+      this.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-50', 'dark:hover:bg-gray-800');
+      this.classList.add('active', 'bg-indigo-50', 'text-indigo-700', 'dark:bg-indigo-900/20', 'dark:text-indigo-300');
 
-      // Load stats when transactions tab is clicked
-      if (tabName === 'transactions') {
+      // Load stats when categorization tab is clicked
+      if (tabName === 'categorization') {
         loadCategorizationStats();
       }
     });
@@ -538,7 +447,7 @@
 
     // Show processing state
     btn.disabled = true;
-    statusDiv.innerHTML = '<div class="flex items-center space-x-2"><i class="bi bi-arrow-clockwise animate-spin"></i><span>Processing...</span></div>';
+    statusDiv.innerHTML = '<div class="flex items-center space-x-2 text-indigo-600"><i class="bi bi-arrow-clockwise animate-spin"></i><span>Processing...</span></div>';
     statusDiv.classList.remove('hidden');
 
     // Get CSRF token
@@ -555,13 +464,8 @@
       .then(data => {
         // Hide spinner and show success message
         statusDiv.innerHTML = `
-          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p class="text-green-800 font-medium mb-2">✓ Successfully categorized ${data.categorized} transactions!</p>
-            <ul class="text-sm text-green-700 space-y-1">
-              <li>High confidence: ${data.high_confidence}</li>
-              <li>Medium confidence: ${data.medium_confidence}</li>
-              <li>Low confidence: ${data.low_confidence}</li>
-            </ul>
+          <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+            <p class="text-green-800 font-medium">✓ Categorized ${data.categorized} transactions!</p>
           </div>
         `;
 
@@ -569,11 +473,13 @@
         setTimeout(() => {
           loadCategorizationStats();
           viewLowConfidenceTransactions();
+          // Hide status after 3 seconds
+          setTimeout(() => statusDiv.classList.add('hidden'), 3000);
         }, 500);
       })
       .catch(error => {
         console.error('Error recategorizing:', error);
-        statusDiv.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error: ${error.message}</div>`;
+        statusDiv.innerHTML = `<div class="text-red-600 text-sm">Error: ${error.message}</div>`;
       })
       .finally(() => {
         btn.disabled = false;
@@ -596,7 +502,7 @@
         if (data.success && data.transactions.length > 0) {
           displayLowConfidenceTransactions(data.transactions);
         } else if (data.transactions.length === 0) {
-          txContainer.innerHTML = '<div class="text-center py-12"><i class="bi bi-check-circle text-4xl text-green-500 mb-2"></i><p class="text-secondary font-medium" style="color: var(--text-secondary)">No low confidence predictions found!</p><p class="text-sm text-muted" style="color: var(--text-muted)"">All transactions are categorized with good confidence.</p></div>';
+          txContainer.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="bi bi-check-circle text-2xl text-green-500 mb-2 block"></i>No low confidence predictions found!</div>';
         } else {
           txContainer.innerHTML = '<div class="text-center py-4 text-red-500">Error: ' + data.error + '</div>';
         }
@@ -613,36 +519,31 @@
     // Sort by confidence (lowest first)
     const sorted = transactions.sort((a, b) => a.confidence - b.confidence);
 
-    let html = '<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="border-b-2 border-gray-200 sticky top-0 bg-surface" style="background-color: var(--bg-surface)""><tr><th class="text-left py-3 px-3 font-semibold text-gray-700">Date</th><th class="text-left py-3 px-3 font-semibold text-gray-700">Merchant</th><th class="text-left py-3 px-3 font-semibold text-gray-700">Category</th><th class="text-right py-3 px-3 font-semibold text-gray-700">Confidence</th><th class="text-right py-3 px-3 font-semibold text-gray-700">Amount</th></tr></thead><tbody>';
+    let html = '<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"><tr><th class="text-left py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Date</th><th class="text-left py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Merchant</th><th class="text-left py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Category</th><th class="text-right py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Conf.</th><th class="text-right py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Amount</th></tr></thead><tbody>';
 
     sorted.forEach((transaction) => {
       const confidence = transaction.confidence * 100;
-      let confidenceClass = 'bg-red-100 text-red-800';
+      let confidenceClass = 'text-red-600';
       if (confidence >= 80) {
-        confidenceClass = 'bg-green-100 text-green-800';
+        confidenceClass = 'text-green-600';
       } else if (confidence >= 60) {
-        confidenceClass = 'bg-yellow-100 text-yellow-800';
+        confidenceClass = 'text-yellow-600';
       } else if (confidence >= 40) {
-        confidenceClass = 'bg-orange-100 text-orange-800';
+        confidenceClass = 'text-orange-600';
       }
 
       html += `
-        <tr class="border-b border-gray-100 hover:bg-secondary" style="background-color: var(--bg-secondary)"">
-          <td class="py-3 px-3 text-primary" style="color: var(--text-primary)"">${transaction.date}</td>
-          <td class="py-3 px-3 text-primary font-medium" style="color: var(--text-primary)">${transaction.booking_text}</td>
-          <td class="py-3 px-3"><span class="inline-block bg-indigo-100 text-indigo-800 px-2 py-1 rounded">${transaction.category}</span></td>
-          <td class="py-3 px-3 text-right"><span class="inline-block ${confidenceClass} px-3 py-1 rounded-full font-medium">${confidence.toFixed(1)}%</span></td>
-          <td class="py-3 px-3 text-right text-primary" style="color: var(--text-primary)"">${parseFloat(transaction.amount).toFixed(2)}</td>
+        <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+          <td class="py-2 px-3 text-gray-900 dark:text-gray-300">${transaction.date}</td>
+          <td class="py-2 px-3 text-gray-900 dark:text-gray-300 font-medium">${transaction.booking_text}</td>
+          <td class="py-2 px-3"><span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded text-xs">${transaction.category}</span></td>
+          <td class="py-2 px-3 text-right"><span class="${confidenceClass} font-medium">${confidence.toFixed(0)}%</span></td>
+          <td class="py-2 px-3 text-right text-gray-900 dark:text-gray-300">${parseFloat(transaction.amount).toFixed(2)}</td>
         </tr>
       `;
     });
 
     html += '</tbody></table></div>';
-
-    if (sorted.length === 0) {
-      html = '<div class="text-center py-12"><i class="bi bi-check-circle text-4xl text-green-500 mb-2"></i><p class="text-secondary font-medium" style="color: var(--text-secondary)">No low confidence predictions found!</p><p class="text-sm text-muted" style="color: var(--text-muted)"">All transactions are categorized with good confidence.</p></div>';
-    }
-
     container.innerHTML = html;
   }
 
@@ -677,17 +578,17 @@
     // Drag and drop
     dropZone.addEventListener('dragover', function (e) {
       e.preventDefault();
-      dropZone.classList.add('bg-blue-200', 'border-blue-400');
+      dropZone.classList.add('bg-gray-100', 'dark:bg-gray-700');
     });
 
     dropZone.addEventListener('dragleave', function (e) {
       e.preventDefault();
-      dropZone.classList.remove('bg-blue-200', 'border-blue-400');
+      dropZone.classList.remove('bg-gray-100', 'dark:bg-gray-700');
     });
 
     dropZone.addEventListener('drop', function (e) {
       e.preventDefault();
-      dropZone.classList.remove('bg-blue-200', 'border-blue-400');
+      dropZone.classList.remove('bg-gray-100', 'dark:bg-gray-700');
       handleFileUpload(e.dataTransfer.files);
     });
   }
@@ -703,17 +604,15 @@
       console.log('Added file to formData:', file.name);
     }
 
-    uploadStatus.innerHTML = '<div class="flex items-center space-x-2"><i class="bi bi-arrow-clockwise animate-spin"></i><span>Uploading and processing...</span></div>';
+    uploadStatus.innerHTML = '<div class="flex items-center space-x-2 text-indigo-600"><i class="bi bi-arrow-clockwise animate-spin"></i><span>Uploading and processing...</span></div>';
     uploadStatus.classList.remove('hidden');
 
     const csrfToken = getCookie('csrftoken');
-    console.log('CSRF token:', csrfToken ? 'Found' : 'NOT FOUND');
     if (!csrfToken) {
-      uploadStatus.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error: CSRF token not found. Please refresh the page.</div>';
+      uploadStatus.innerHTML = '<div class="text-red-600 text-sm">Error: CSRF token not found. Please refresh the page.</div>';
       return;
     }
 
-    console.log('Sending POST request to /settings/');
     fetch('/settings/', {
       method: 'POST',
       body: formData,
@@ -722,14 +621,11 @@
       }
     })
       .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
         if (response.ok) {
           // Show success message
           uploadStatus.innerHTML = `
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p class="text-green-800 font-medium mb-1">✓ Files uploaded and processed successfully!</p>
-              <p class="text-sm text-green-700">Transactions have been imported and categorized.</p>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+              <p class="text-green-800 font-medium">✓ Files uploaded successfully!</p>
             </div>
           `;
 
@@ -738,16 +634,14 @@
             loadCategorizationStats();
             // Reload the page to show any server-side messages
             location.reload();
-          }, 2000);
+          }, 1500);
         } else {
-          console.error('Upload failed with status:', response.status);
-          response.text().then(text => console.error('Response body:', text));
-          uploadStatus.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error uploading file (status ' + response.status + '). Please try again.</div>';
+          uploadStatus.innerHTML = '<div class="text-red-600 text-sm">Error uploading file (status ' + response.status + '). Please try again.</div>';
         }
       })
       .catch(error => {
         console.error('Error uploading file:', error);
-        uploadStatus.innerHTML = '<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Error uploading file: ' + error.message + '</div>';
+        uploadStatus.innerHTML = '<div class="text-red-600 text-sm">Error uploading file: ' + error.message + '</div>';
       });
   }
 
@@ -769,18 +663,6 @@
         }
       });
     });
-
-    // Setup info toggle
-    const infoToggle = document.getElementById('info-toggle');
-    const infoContent = document.getElementById('info-content');
-    const infoIcon = document.getElementById('info-icon');
-
-    if (infoToggle) {
-      infoToggle.addEventListener('click', function () {
-        infoContent.classList.toggle('hidden');
-        infoIcon.style.transform = infoContent.classList.contains('hidden') ? 'rotate(0)' : 'rotate(180deg)';
-      });
-    }
 
     // Setup manual categorization
     const searchMerchantBtn = document.getElementById('search-merchant-btn');
@@ -820,6 +702,53 @@
     if (hideSearchBtn) {
       hideSearchBtn.addEventListener('click', function () {
         searchResults.classList.add('hidden');
+      });
+    }
+    
+    // Handle excluded categories form submission
+    const excludedCategoriesForm = document.getElementById('excluded-categories-form');
+    if (excludedCategoriesForm) {
+      excludedCategoriesForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const csrfToken = getCookie('csrftoken');
+        const formData = new FormData(this);
+        const excludedCategories = formData.getAll('excluded_category');
+        
+        fetch('/api/excluded-categories/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            excluded_categories: excludedCategories
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          const statusDiv = document.getElementById('excluded-status');
+          if (data.success) {
+            statusDiv.className = 'mt-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800';
+            statusDiv.innerHTML = '✓ Excluded categories updated successfully!';
+            statusDiv.classList.remove('hidden');
+            setTimeout(() => {
+              statusDiv.classList.add('hidden');
+            }, 3000);
+          } else {
+            statusDiv.className = 'mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800';
+            statusDiv.innerHTML = 'Error: ' + data.error;
+            statusDiv.classList.remove('hidden');
+          }
+        })
+        .catch(error => {
+          console.error('Error updating excluded categories:', error);
+          const statusDiv = document.getElementById('excluded-status');
+          statusDiv.className = 'mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800';
+          statusDiv.innerHTML = 'Error: ' + error.message;
+          statusDiv.classList.remove('hidden');
+        });
       });
     }
   });
@@ -882,11 +811,11 @@
     const totalPages = Math.ceil(transactions.length / resultsPerPage);
 
     let html = `
-      <div class="bg-secondary" style="background-color: var(--bg-secondary)" px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-        <span class="text-sm text-secondary" style="color: var(--text-secondary)"">Found ${transactions.length} transactions</span>
-        <span class="text-sm text-secondary" style="color: var(--text-secondary)"">Page ${page} of ${totalPages}</span>
+      <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <span class="text-sm text-gray-600 dark:text-gray-400">Found ${transactions.length} transactions</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">Page ${page} of ${totalPages}</span>
       </div>
-      <div class="divide-y divide-gray-200">
+      <div class="divide-y divide-gray-200 dark:divide-gray-700">
     `;
 
     pageTransactions.forEach(tx => {
@@ -907,19 +836,19 @@
       });
 
       html += `
-        <div class="p-4 hover:bg-secondary transition" style="background-color: var(--bg-secondary)">
+        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
           <div class="flex justify-between items-start mb-2">
             <div>
-              <div class="font-medium text-primary" style="color: var(--text-primary)"">${tx.booking_text}</div>
-              <div class="text-xs text-muted" style="color: var(--text-muted)"">${tx.date} • ${parseFloat(tx.amount).toFixed(2)} ${tx.currency}</div>
+              <div class="font-medium text-gray-900 dark:text-white">${tx.booking_text}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">${tx.date} • ${parseFloat(tx.amount).toFixed(2)} ${tx.currency}</div>
             </div>
-            <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition"
+            <button class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-2 py-1 rounded transition"
                     onclick="applyCategoryToAll('${tx.booking_text.replace(/'/g, "\\'")}')">
               Apply to all matching
             </button>
           </div>
           <div class="flex items-center gap-2">
-            <select class="block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            <select class="block w-full text-sm border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     onchange="updateCategory(${tx.id}, this.value)">
               ${categoryOptions}
             </select>
@@ -933,17 +862,17 @@
     // Pagination controls
     if (totalPages > 1) {
       html += `
-        <div class="bg-secondary" style="background-color: var(--bg-secondary)" px-4 py-3 border-t border-gray-200 flex justify-between items-center">
+        <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <button 
             onclick="changePage(${page - 1})" 
-            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-surface" style="background-color: var(--bg-surface)" hover:bg-secondary" style="background-color: var(--bg-secondary)" ${page === 1 ? 'opacity-50 cursor-not-allowed' : ''}"
+            class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 ${page === 1 ? 'opacity-50 cursor-not-allowed' : ''}"
             ${page === 1 ? 'disabled' : ''}
           >
             Previous
           </button>
           <button 
             onclick="changePage(${page + 1})" 
-            class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-surface" style="background-color: var(--bg-surface)" hover:bg-secondary" style="background-color: var(--bg-secondary)" ${page === totalPages ? 'opacity-50 cursor-not-allowed' : ''}"
+            class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 ${page === totalPages ? 'opacity-50 cursor-not-allowed' : ''}"
             ${page === totalPages ? 'disabled' : ''}
           >
             Next

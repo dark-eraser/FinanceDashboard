@@ -5,11 +5,11 @@
 {% block content %}
 <!-- Hero Section -->
 <div class="mb-8">
-  <h1 class="text-4xl font-bold text-gray-900 mb-2">
-    <i class="bi text-indigo-600"></i>
+  <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+    <i class="bi bi-speedometer2 text-indigo-600 dark:text-indigo-400"></i>
     Financial Dashboard
   </h1>
-  <p class="text-gray-600">
+  <p class="text-gray-600 dark:text-gray-400">
     Track your income, expenses, and financial insights at a glance
   </p>
 </div>
@@ -17,71 +17,71 @@
 <!-- Summary Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
   <!-- Total Expenses Card -->
-  <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500 hover:shadow-xl transition duration-300">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 border-l-4 border-red-500 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-600 uppercase">Top Expense</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase">Top Expense</p>
         {% if top_spending %}
-        <p class="text-3xl font-bold text-gray-900 mt-2">
+        <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">
           {{ top_spending.0.total|floatformat:0|intcomma }}
-          <span class="text-base text-gray-500">
+          <span class="text-base text-gray-500 dark:text-gray-400">
             {% for currency, amount in top_spending.0.currencies.items %}
             {{ currency }}{% if not forloop.last %}/{% endif %}
             {% endfor %}
           </span>
         </p>
-        <p class="text-xs text-gray-500 mt-1">{{ top_spending.0.category }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ top_spending.0.category }}</p>
         {% else %}
-        <p class="text-3xl font-bold text-gray-400 mt-2">-</p>
+        <p class="text-3xl font-bold text-gray-400 dark:text-gray-600 mt-2">-</p>
         {% endif %}
       </div>
-      <div class="bg-red-100 rounded-full p-3">
-        <i class="bi bi-arrow-down-circle text-red-600 text-2xl"></i>
+      <div class="bg-red-100 dark:bg-red-900/30 rounded-full p-3">
+        <i class="bi bi-arrow-down-circle text-red-600 dark:text-red-400 text-2xl"></i>
       </div>
     </div>
   </div>
 
   <!-- Total Income Card -->
-  <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-xl transition duration-300">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 border-l-4 border-green-500 hover:shadow-xl transition duration-300">
     <div class="flex items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-600 uppercase">Top Income</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase">Top Income</p>
         {% if top_income %}
-        <p class="text-3xl font-bold text-gray-900 mt-2">
+        <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">
           {{ top_income.0.total|floatformat:0|intcomma }}
-          <span class="text-base text-gray-500">
+          <span class="text-base text-gray-500 dark:text-gray-400">
             {% for currency, amount in top_income.0.currencies.items %}
             {{ currency }}{% if not forloop.last %}/{% endif %}
             {% endfor %}
           </span>
         </p>
-        <p class="text-xs text-gray-500 mt-1">{{ top_income.0.category }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ top_income.0.category }}</p>
         {% else %}
-        <p class="text-3xl font-bold text-gray-400 mt-2">-</p>
+        <p class="text-3xl font-bold text-gray-400 dark:text-gray-600 mt-2">-</p>
         {% endif %}
       </div>
-      <div class="bg-green-100 rounded-full p-3">
-        <i class="bi bi-arrow-up-circle text-green-600 text-2xl"></i>
+      <div class="bg-green-100 dark:bg-green-900/30 rounded-full p-3">
+        <i class="bi bi-arrow-up-circle text-green-600 dark:text-green-400 text-2xl"></i>
       </div>
     </div>
   </div>
 </div>
 <!-- Month by Month Comparison Chart -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-  <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4 flex justify-between items-center">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
+  <div class="bg-gradient-to-r from-indigo-500 to-indigo-700 px-6 py-4 flex justify-between items-center">
     <h2 class="text-xl font-bold text-white flex items-center">
       <i class="bi bi-graph-up mr-2"></i>
       Monthly Income vs Expenses
     </h2>
     <div class="flex items-center space-x-4">
       <!-- Chart Type Toggle -->
-      <div class="flex space-x-2 bg-blue-600 rounded-lg p-1">
-        <button id="chartTypeLineBtn" class="px-3 py-1 rounded text-sm font-semibold text-white bg-blue-700 transition"
+      <div class="flex space-x-2 bg-indigo-600 rounded-lg p-1">
+        <button id="chartTypeLineBtn" class="px-3 py-1 rounded text-sm font-semibold text-white bg-indigo-700 transition"
           onclick="switchChartType('line')">
           <i class="bi bi-graph-up mr-1"></i>Line
         </button>
         <button id="chartTypeBarBtn"
-          class="px-3 py-1 rounded text-sm font-semibold text-blue-200 hover:bg-blue-600 transition"
+          class="px-3 py-1 rounded text-sm font-semibold text-indigo-200 hover:bg-indigo-600 transition"
           onclick="switchChartType('bar')">
           <i class="bi bi-bar-chart mr-1"></i>Bar
         </button>
@@ -89,7 +89,7 @@
 
       <!-- Year Selector -->
       <select id="yearSelector"
-        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
         onchange="switchYear(this.value)">
         <option value="">All Years</option>
         <!-- Year options will be populated by JavaScript -->
@@ -108,7 +108,7 @@
 <!-- Main Content Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
   <!-- Top Spending Categories -->
-  <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition duration-300">
     <div class="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4">
       <h2 class="text-xl font-bold text-white flex items-center">
         <i class="bi bi-pie-chart-fill mr-2"></i>
@@ -124,14 +124,14 @@
       </div>
       <div class="space-y-2">
         {% for item in top_spending %}
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-lg">
           <div class="flex items-center space-x-3">
             <div class="w-4 h-4 rounded-full" style="background-color: {{ item.color }}"></div>
-            <p class="font-medium text-gray-900 text-sm">{{ item.category }}</p>
+            <p class="font-medium text-gray-900 dark:text-white text-sm">{{ item.category }}</p>
           </div>
-          <p class="text-sm font-bold text-gray-700">
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">
             {{ item.total|floatformat:2|intcomma }}
-            <span class="text-xs text-gray-500">
+            <span class="text-xs text-gray-500 dark:text-gray-400">
               {% for currency, amount in item.currencies.items %}
               {{ currency }}{% if not forloop.last %}/{% endif %}
               {% endfor %}
@@ -142,9 +142,9 @@
       </div>
       {% else %}
       <div class="text-center py-12">
-        <i class="bi bi-inbox text-gray-300 text-5xl"></i>
-        <p class="text-gray-500 mt-4">No expense data available</p>
-        <p class="text-sm text-gray-400 mt-2">
+        <i class="bi bi-inbox text-gray-300 dark:text-gray-600 text-5xl"></i>
+        <p class="text-gray-500 dark:text-gray-400 mt-4">No expense data available</p>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">
           Upload your bank statements to get started
         </p>
       </div>
@@ -153,7 +153,7 @@
   </div>
 
   <!-- Top Income Categories -->
-  <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition duration-300">
     <div class="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
       <h2 class="text-xl font-bold text-white flex items-center">
         <i class="bi bi-pie-chart-fill mr-2"></i>
@@ -169,14 +169,14 @@
       </div>
       <div class="space-y-2">
         {% for item in top_income %}
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-lg">
           <div class="flex items-center space-x-3">
             <div class="w-4 h-4 rounded-full" style="background-color: {{ item.color }}"></div>
-            <p class="font-medium text-gray-900 text-sm">{{ item.category }}</p>
+            <p class="font-medium text-gray-900 dark:text-white text-sm">{{ item.category }}</p>
           </div>
-          <p class="text-sm font-bold text-gray-700">
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">
             {{ item.total|floatformat:2|intcomma }}
-            <span class="text-xs text-gray-500">
+            <span class="text-xs text-gray-500 dark:text-gray-400">
               {% for currency, amount in item.currencies.items %}
               {{ currency }}{% if not forloop.last %}/{% endif %}
               {% endfor %}
@@ -187,9 +187,9 @@
       </div>
       {% else %}
       <div class="text-center py-12">
-        <i class="bi bi-inbox text-gray-300 text-5xl"></i>
-        <p class="text-gray-500 mt-4">No income data available</p>
-        <p class="text-sm text-gray-400 mt-2">
+        <i class="bi bi-inbox text-gray-300 dark:text-gray-600 text-5xl"></i>
+        <p class="text-gray-500 dark:text-gray-400 mt-4">No income data available</p>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">
           Upload your bank statements to get started
         </p>
       </div>
@@ -200,7 +200,7 @@
 
 
 <!-- Quick Actions -->
-<div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-8 text-white mb-8">
+<div class="bg-gradient-to-r from-indigo-500 to-indigo-700 rounded-xl shadow-lg p-8 text-white mb-8">
   <div class="flex flex-col md:flex-row items-center justify-between">
     <div class="mb-4 md:mb-0">
       <h3 class="text-2xl font-bold mb-2">Ready to analyze more?</h3>
@@ -224,10 +224,10 @@
 </div>
 
 <!-- Compact Time Filter (Bottom Right) -->
-<div class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-40">
+<div class="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700 z-40">
   <div class="flex flex-col gap-2">
-    <div class="text-xs font-semibold text-gray-600 mb-1">
-      <i class="bi bi-calendar-range text-indigo-600"></i> Time Period
+    <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+      <i class="bi bi-calendar-range text-indigo-600 dark:text-indigo-400"></i> Time Period
     </div>
 
     <div class="flex flex-col gap-1">
@@ -236,11 +236,11 @@
         All Time
       </button>
       <button type="button" onclick="setTimeFilter('last_year')" id="filter-last_year"
-        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300">
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-white/20">
         Last Year
       </button>
       <button type="button" onclick="toggleCustomDateRange()" id="filter-custom"
-        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300">
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-white/20">
         Custom
       </button>
     </div>
@@ -248,9 +248,9 @@
     <!-- Custom Date Range Inputs (Hidden by default) -->
     <div id="customDateInputs" class="hidden mt-2 space-y-2">
       <input type="date" id="startDate"
-        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+        class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
       <input type="date" id="endDate"
-        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+        class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
       <button type="button" onclick="applyCustomDateRange()"
         class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium transition duration-200">
         Apply
@@ -261,22 +261,22 @@
 
 <!-- Side Panel for Category Details -->
 <div id="categoryDetailPanel"
-  class="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-50">
+  class="fixed right-0 top-0 h-full w-96 bg-white dark:bg-gray-800 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 border-l border-gray-200 dark:border-gray-700">
   <div class="h-full flex flex-col">
     <!-- Header -->
-    <div id="panelHeader" class="px-6 py-4">
+    <div id="panelHeader" class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center justify-between">
-        <h3 id="panelTitle" class="text-xl font-bold text-gray-900"></h3>
-        <button onclick="closeCategoryPanel()" class="text-gray-500 hover:text-gray-700">
+        <h3 id="panelTitle" class="text-xl font-bold text-gray-900 dark:text-white"></h3>
+        <button onclick="closeCategoryPanel()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
           <i class="bi bi-x-lg text-2xl"></i>
         </button>
       </div>
-      <p id="panelAmount" class="text-2xl font-bold mt-2"></p>
+      <p id="panelAmount" class="text-2xl font-bold mt-2 text-gray-900 dark:text-white"></p>
     </div>
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto px-6 pb-6">
-      <div id="panelContent"></div>
+      <div id="panelContent" class="text-gray-700 dark:text-gray-300"></div>
     </div>
   </div>
 </div>
@@ -889,22 +889,22 @@
       .then(data => {
         const transactions = data.transactions;
         let html = `
-          <h4 class="font-semibold text-gray-900 mb-3">Recent Transactions</h4>
+          <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Recent Transactions</h4>
           <div class="space-y-2">
         `;
 
         if (transactions.length === 0) {
-          html += '<p class="text-gray-500 text-sm">No transactions found</p>';
+          html += '<p class="text-gray-500 dark:text-gray-400 text-sm">No transactions found</p>';
         } else {
           transactions.slice(0, 20).forEach(t => {
             html += `
-              <div class="border-b border-gray-200 pb-2">
+              <div class="border-b border-gray-200 dark:border-gray-700 pb-2">
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">${t.booking_text || 'N/A'}</p>
-                    <p class="text-xs text-gray-500">${t.date}</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">${t.booking_text || 'N/A'}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">${t.date}</p>
                   </div>
-                  <p class="text-sm font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}">
+                  <p class="text-sm font-semibold ${t.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
                     ${t.amount.toLocaleString()} ${t.currency}
                   </p>
                 </div>
@@ -913,7 +913,7 @@
           });
 
           if (transactions.length > 20) {
-            html += `<p class="text-xs text-gray-500 mt-3">Showing 20 of ${transactions.length} transactions</p>`;
+            html += `<p class="text-xs text-gray-500 dark:text-gray-400 mt-3">Showing 20 of ${transactions.length} transactions</p>`;
           }
         }
 
@@ -1066,14 +1066,14 @@
     categories.forEach(item => {
       const currencyList = Object.keys(item.currencies).join('/');
       html += `
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div class="flex items-center space-x-3">
             <div class="w-4 h-4 rounded-full" style="background-color: ${item.color}"></div>
-            <p class="font-medium text-gray-900 text-sm">${item.category}</p>
+            <p class="font-medium text-gray-900 dark:text-white text-sm">${item.category}</p>
           </div>
-          <p class="text-sm font-bold text-gray-700">
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-300">
             ${item.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span class="text-xs text-gray-500">${currencyList}</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">${currencyList}</span>
           </p>
         </div>
       `;

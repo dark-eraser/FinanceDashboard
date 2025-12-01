@@ -30,43 +30,12 @@
   }
 </script>
 
-<!-- Active Filters Banner -->
-<div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-lg shadow-sm">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center">
-      <i class="bi bi-funnel-fill text-indigo-600 text-xl mr-3"></i>
-      <div>
-        <p class="font-semibold text-gray-800">Active Filters</p>
-        <p class="text-sm " style="color: var(--text-secondary);">
-          {% if selected_file_ids %}
-          {{ selected_file_ids|length }} file(s) selected
-          {% else %}
-          All files
-          {% endif %}
-          |
-          {% if selected_currencies %}
-          {{ selected_currencies|join:", " }}
-          {% else %}
-          All currencies
-          {% endif %}
-        </p>
-      </div>
-    </div>
-    <a href="{% url 'settings' %}" class="bg-white hover:style=" background-color: var(--bg-secondary);" text-indigo-700
-      px-4 py-2 rounded-lg font-semibold transition duration-200 flex items-center space-x-2 shadow-sm border
-      border-indigo-200">
-      <i class="bi bi-gear-fill"></i>
-      <span>Change Filters</span>
-    </a>
-  </div>
-</div>
-
 <!-- Chart and Category Filter Section -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
   <!-- Chart -->
-  <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition duration-300">
-    <div class="bg-gradient-to-r from-red-500 to-pink-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl">
-      <h2 class="chart-title">
+  <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover:shadow-xl transition duration-300">
+    <div class="bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl">
+      <h2 class="chart-title text-white font-bold text-lg flex items-center">
         <i class="bi bi-graph-up mr-2"></i>
         Spending Overview
       </h2>
@@ -77,22 +46,20 @@
   </div>
 
   <!-- Category Filters -->
-  <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-    <div class="chart-header">
-      <h2 class="chart-title">
-        <i class="bi bi-tags-fill mr-2"></i>
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-xl transition duration-300">
+    <div class="chart-header p-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="chart-title font-bold text-gray-800 dark:text-white flex items-center">
+        <i class="bi bi-tags-fill mr-2 text-indigo-500"></i>
         Show Categories
       </h2>
     </div>
     <div class="p-6 max-h-[400px] overflow-y-auto" id="category-checkboxes">
       {% for category, total in filtered_category_totals.items %}
-      <label class="flex items-center p-3 style=" background-color: var(--bg-secondary);" rounded-lg hover:bg-gray-100
-        cursor-pointer transition duration-200 mb-2">
-        <input class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 category-filter"
+      <label class="flex items-center p-3 bg-gray-50 dark:bg-white/5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer transition duration-200 mb-2">
+        <input class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 category-filter"
           type="checkbox" value="{{ category }}" id="cat-{{ forloop.counter }}" checked />
-        <span class="ml-3 text-sm font-medium " style="color: var(--text-primary);">{{ category }}</span>
-        <span class="ml-auto text-xs font-semibold " style="color: var(--text-secondary);">{{ total|floatformat:2
-          }}</span>
+        <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-200">{{ category }}</span>
+        <span class="ml-auto text-xs font-semibold text-gray-500 dark:text-gray-400">{{ total|floatformat:2 }}</span>
       </label>
       {% endfor %}
     </div>
@@ -100,41 +67,38 @@
 </div>
 
 <!-- Category Totals Table -->
-<div class="chart-container">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
   <button onclick="toggleSection('totals')"
-    class="w-full bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-amber-600 hover:to-orange-600 transition duration-200">
-    <h2 class="chart-title">
+    class="w-full bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-4 flex items-center justify-between transition duration-200">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-gray-200 flex items-center">
       <i class="bi bi-list-ul mr-2"></i>
       Category Totals
     </h2>
-    <i class="bi bi-chevron-down text-white text-xl" id="totals-icon"></i>
+    <i class="bi bi-chevron-down text-gray-600 dark:text-gray-400 text-xl" id="totals-icon"></i>
   </button>
-  <div id="totals-content" class="p-6">
+  <div id="totals-content" class="p-0">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200" id="category-totals-table">
-        <thead>
-          <tr class="style=" background-color: var(--bg-secondary);"">
-            <th class="px-6 py-3 text-left text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" id="category-totals-table">
+        <thead class="bg-gray-50 dark:bg-white/5">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Category
             </th>
-            <th class="px-6 py-3 text-right text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Total Amount
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {% for category, total in filtered_category_totals.items %}
-          <tr data-category="{{ category }}" class="hover:style=" background-color: var(--bg-secondary);" transition
-            duration-200">
+          <tr data-category="{{ category }}" class="hover:bg-gray-50 dark:hover:bg-white/5 transition duration-200">
             <td class="px-6 py-4 whitespace-nowrap">
               <span
-                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
                 {{ category }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold " style="color: var(--text-primary);">
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900 dark:text-white">
               {{ total|floatformat:2 }} CHF
             </td>
           </tr>
@@ -146,64 +110,57 @@
 </div>
 
 <!-- Transactions Table -->
-<div class="chart-container">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
   <button onclick="toggleSection('transactions')"
-    class="w-full bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-purple-600 hover:to-pink-700 transition duration-200">
-    <h2 class="chart-title">
+    class="w-full bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-4 flex items-center justify-between transition duration-200">
+    <h2 class="text-lg font-bold text-gray-700 dark:text-gray-200 flex items-center">
       <i class="bi bi-receipt mr-2"></i>
       Transaction Details
     </h2>
-    <i class="bi bi-chevron-right text-white text-xl" id="transactions-icon"></i>
+    <i class="bi bi-chevron-right text-gray-600 dark:text-gray-400 text-xl" id="transactions-icon"></i>
   </button>
-  <div id="transactions-content" class="p-6 hidden">
+  <div id="transactions-content" class="p-0 hidden">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200" id="transactions-table">
-        <thead>
-          <tr class="style=" background-color: var(--bg-secondary);"">
-            <th class="px-6 py-3 text-left text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" id="transactions-table">
+        <thead class="bg-gray-50 dark:bg-white/5">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Date
             </th>
-            <th class="px-6 py-3 text-left text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Description
             </th>
-            <th class="px-6 py-3 text-right text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Amount
             </th>
-            <th class="px-6 py-3 text-center text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Currency
             </th>
-            <th class="px-6 py-3 text-center text-xs font-semibold  uppercase tracking-wider"
-              style="color: var(--text-secondary);">
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Category
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {% for tx in transactions %} {% if tx.Category != 'Uncounted' %}
-          <tr data-category="{{ tx.Category }}" class="hover:style=" background-color: var(--bg-secondary);" transition
-            duration-200">
-            <td class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--text-muted);">
+          <tr data-category="{{ tx.Category }}" class="hover:bg-gray-50 dark:hover:bg-white/5 transition duration-200">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
               {{ tx.Date }}
             </td>
-            <td class="px-6 py-4 text-sm " style="color: var(--text-primary);">
+            <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
               {{ tx.Booking_text }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold "
-              style="color: var(--text-primary);">
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900 dark:text-white">
               {{ tx.Amount|floatformat:2 }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
               <span
-                class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{
                 tx.Currency }}</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
               <span
-                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">{{
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">{{
                 tx.Category }}</span>
             </td>
           </tr>
@@ -468,7 +425,7 @@
 </script>
 
 <!-- Compact Time Filter (Bottom Right) -->
-<div class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-40">
+<div class="fixed bottom-4 right-4 bg-white dark:bg-dark-surface rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700 z-40">
   <div class="flex flex-col gap-2">
     <div class="text-xs font-semibold  mb-1" style="color: var(--text-secondary);">
       <i class="bi bi-calendar-range text-indigo-600"></i> Time Period

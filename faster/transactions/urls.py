@@ -3,30 +3,77 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    # Public Pages
+    path("", views.landing_page, name="landing"),
+    path("pricing/", views.pricing_page, name="pricing"),
+    # Auth
+    path("signup/", views.signup_view, name="signup"),
+    path("login/", views.login_view, name="login"),
+    path("logout/", views.logout_view, name="logout"),
+    # App
+    path("dashboard/", views.dashboard, name="dashboard"),
     path("settings/", views.settings_view, name="settings"),
+    path("delete-file/<int:file_id>/", views.delete_file, name="delete_file"),
+    # Dashboard Views
     path(
         "expenses-by-category/", views.expenses_by_category, name="expenses_by_category"
     ),
     path("income-by-category/", views.income_by_category, name="income_by_category"),
     path("expenses-vs-income/", views.expenses_vs_income, name="expenses_vs_income"),
     path("monthly-budget/", views.monthly_budget, name="monthly_budget"),
-    path("delete-file/<int:file_id>/", views.delete_file, name="delete_file"),
     # API endpoints
     path("api/transactions/", views.api_get_transactions, name="api_get_transactions"),
     path(
         "api/transactions/search/",
         views.api_search_transactions,
         name="api_search_transactions",
-    ),  # Search endpoint
+    ),
+    # Category Management
+    path(
+        "api/transactions/update-category/",
+        views.api_update_category,
+        name="api_update_category_new",
+    ),
     path(
         "api/transactions/<int:transaction_id>/update-category/",
         views.api_update_category,
         name="api_update_category",
     ),
     path(
+        "api/transactions/bulk-categorize/",
+        views.api_bulk_categorize,
+        name="api_bulk_categorize",
+    ),
+    path(
         "api/categories/create/", views.api_create_category, name="api_create_category"
     ),
+    # Categorization Services
+    path(
+        "api/categorization/stats/",
+        views.api_categorization_stats,
+        name="api_categorization_stats",
+    ),
+    path(
+        "api/categorization/recategorize/",
+        views.api_recategorize_uncategorized,
+        name="api_recategorize",
+    ),
+    path(
+        "api/categorization/low-confidence/",
+        views.api_low_confidence_transactions,
+        name="api_low_confidence",
+    ),
+    path(
+        "api/categorization/suggestions/",
+        views.api_get_category_suggestions,
+        name="api_get_category_suggestions",
+    ),
+    path(
+        "api/excluded-categories/",
+        views.api_update_excluded_categories,
+        name="api_excluded_categories",
+    ),
+    # Dashboard Data
     path("api/dashboard-data/", views.dashboard_data_ajax, name="dashboard_data_ajax"),
     path(
         "api/dashboard-monthly-data/",
@@ -47,32 +94,6 @@ urlpatterns = [
         "api/income-by-category-data/",
         views.income_by_category_data_ajax,
         name="income_by_category_data_ajax",
-    ),
-    # Semantic categorization endpoints
-    path(
-        "api/categorization/stats/",
-        views.api_categorization_stats,
-        name="api_categorization_stats",
-    ),
-    path(
-        "api/categorization/recategorize/",
-        views.api_recategorize_uncategorized,
-        name="api_recategorize_uncategorized",
-    ),
-    path(
-        "api/categorization/low-confidence/",
-        views.api_low_confidence_transactions,
-        name="api_low_confidence_transactions",
-    ),
-    path(
-        "api/categorization/suggestions/",
-        views.api_get_category_suggestions,
-        name="api_get_category_suggestions",
-    ),
-    path(
-        "api/excluded-categories/",
-        views.api_update_excluded_categories,
-        name="api_update_excluded_categories",
     ),
     path(
         "api/budget-comparison/",
