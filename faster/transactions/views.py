@@ -281,14 +281,37 @@ def settings_view(request):
 
     # Handle settings update
     elif request.method == "POST":
-        selected_file_ids = request.POST.getlist("file")
-        selected_currencies = request.POST.getlist("currency")
+        form_type = request.POST.get("form_type")
 
-        # Save to session
-        request.session["selected_file_ids"] = selected_file_ids
-        request.session["selected_currencies"] = selected_currencies
+        if form_type == "files":
+            selected_file_ids = request.POST.getlist("file")
+            request.session["selected_file_ids"] = selected_file_ids
+            success = "File selection updated successfully"
 
-        success = "Settings saved successfully"
+        elif form_type == "currencies":
+            selected_currencies = request.POST.getlist("currency")
+            request.session["selected_currencies"] = selected_currencies
+            success = "Currency selection updated successfully"
+
+        elif form_type == "excluded_categories":
+            # This is handled by a separate view usually, but if it's here:
+            excluded = request.POST.getlist("excluded_category")
+            dashboard_settings.excluded_categories = excluded
+            dashboard_settings.save()
+            success = "Excluded categories updated successfully"
+
+        else:
+            # Fallback for backward compatibility or if form_type is missing
+            # Only update if the specific fields are present in POST data
+            if "file" in request.POST:
+                selected_file_ids = request.POST.getlist("file")
+                request.session["selected_file_ids"] = selected_file_ids
+
+            if "currency" in request.POST:
+                selected_currencies = request.POST.getlist("currency")
+                request.session["selected_currencies"] = selected_currencies
+
+            success = "Settings saved successfully"
 
     # Get all unique categories for the category management section
     all_categories = sorted(
@@ -427,11 +450,137 @@ def expenses_vs_income(request):
     ]
     import json
 
+    # --- Advanced Analytics Data Prep ---
+    # 1. Sankey Diagram Data
+    # Nodes: Income Categories -> "Budget" -> Expense Categories
+    # We need a list of labels and a list of links (source, target, value)
+
+    sankey_labels = ["Budget"]  # Node 0
+    sankey_source = []
+    sankey_target = []
+    sankey_value = []
+    sankey_color = []  # Optional: specific colors for links
+
+    # Income Nodes (Indices 1 to N)
+    income_categories = {}
+    for t in transactions:
+        if t.amount and t.amount > 0:
+            cat = t.category if t.category else "Uncategorized Income"
+            income_categories[cat] = income_categories.get(cat, 0) + t.amount
+
+    income_start_idx = 1
+    current_idx = income_start_idx
+
+    for cat, amount in income_categories.items():
+        sankey_labels.append(cat)
+        # Link: Income Cat (current_idx) -> Budget (0)
+        sankey_source.append(current_idx)
+        sankey_target.append(0)
+        sankey_value.append(amount)
+        sankey_color.append("rgba(34, 197, 94, 0.4)")  # Greenish
+        current_idx += 1
+
+    # Expense Nodes (Indices N+1 to M)
+    expense_categories = {}
+    for t in transactions:
+        if t.amount and t.amount < 0:
+            cat = t.category if t.category else "Uncategorized Expense"
+            expense_categories[cat] = expense_categories.get(cat, 0) + abs(t.amount)
+
+    for cat, amount in expense_categories.items():
+        sankey_labels.append(cat)
+        # Link: Budget (0) -> Expense Cat (current_idx)
+        sankey_source.append(0)
+        sankey_target.append(current_idx)
+        sankey_value.append(amount)
+        sankey_color.append("rgba(239, 68, 68, 0.4)")  # Reddish
+        current_idx += 1
+
+    # Savings Node (if Income > Expenses)
+    total_income = sum(income_categories.values())
+    total_expenses = sum(expense_categories.values())
+    savings = total_income - total_expenses
+
+    if savings > 0:
+        sankey_labels.append("Savings")
+        # Link: Budget (0) -> Savings (current_idx)
+        sankey_source.append(0)
+        sankey_target.append(current_idx)
+        sankey_value.append(savings)
+        sankey_color.append("rgba(59, 130, 246, 0.4)")  # Blueish
+
+    sankey_data = {
+        "label": sankey_labels,
+        "source": sankey_source,
+        "target": sankey_target,
+        "value": sankey_value,
+        "color": sankey_color,
+    }
+
+    # 2. Heatmap Data (Daily Spending)
+    # Format: { "2023-01-01": 150.50, ... }
+    heatmap_data = defaultdict(float)
+    for t in transactions:
+        if t.amount and t.amount < 0:
+            # Ensure date is string YYYY-MM-DD
+            d_str = str(t.date)
+            # If t.date is datetime object, convert
+            if hasattr(t.date, "strftime"):
+                d_str = t.date.strftime("%Y-%m-%d")
+            heatmap_data[d_str] += abs(t.amount)
+
+    # Convert to list of dicts for easier JS handling or keep as dict
+    # Let's pass as dict and handle keys in JS
+
+    # 3. Subscription Detection (Heuristic)
+    # Same description, similar amount (+- 5%), occurring > 1 time in selected period?
+    # Or better: group by description, check count and variance.
+
+    import statistics
+    from collections import defaultdict
+
+    tx_by_desc = defaultdict(list)
+    for t in transactions:
+        if t.amount and t.amount < 0:
+            # Normalize description: remove dates, numbers at end?
+            # Simple normalization: lowercase, first 20 chars?
+            # Let's use full description for now to be safe
+            desc = t.booking_text.strip()
+            tx_by_desc[desc].append(abs(t.amount))
+
+    subscriptions = []
+    for desc, amounts in tx_by_desc.items():
+        if len(amounts) >= 2:  # At least 2 occurrences
+            avg_amount = statistics.mean(amounts)
+            # Check if amounts are consistent (std dev low or all within % of mean)
+            is_consistent = all(
+                0.9 * avg_amount <= x <= 1.1 * avg_amount for x in amounts
+            )
+
+            if is_consistent:
+                subscriptions.append(
+                    {
+                        "name": desc,
+                        "avg_amount": avg_amount,
+                        "count": len(amounts),
+                        "total": sum(amounts),
+                        "latest_date": "N/A",  # Could find latest date if needed
+                    }
+                )
+
+    # Sort subscriptions by total cost
+    subscriptions.sort(key=lambda x: x["total"], reverse=True)
+
+    import json
+
     return render(
         request,
         "dashboard/expenses_vs_income.html",
         {
             "chart_data": json.dumps(chart_data),
+            "sankey_data": json.dumps(sankey_data),
+            "heatmap_data": json.dumps(heatmap_data),
+            "subscriptions": subscriptions,
             "transactions": tx_data,
             "files": files,
             "selected_file_ids": selected_file_ids,
@@ -1296,6 +1445,56 @@ def api_get_transactions(request):
     return JsonResponse(
         {"transactions": transactions, "all_categories": all_categories}
     )
+
+
+def api_search_transactions(request):
+    """API endpoint to search transactions"""
+    from django.http import JsonResponse
+
+    from .models import Transaction
+
+    query = request.GET.get("q", "").strip()
+    category = request.GET.get("category", "").strip()
+    amount = request.GET.get("amount", "").strip()
+
+    qs = Transaction.objects.all().order_by("-date", "-id")
+
+    # Apply session filters
+    selected_file_ids = request.session.get("selected_file_ids", [])
+    if selected_file_ids:
+        qs = qs.filter(uploaded_file_id__in=selected_file_ids)
+
+    selected_currencies = request.session.get("selected_currencies", [])
+    if selected_currencies:
+        qs = qs.filter(currency__in=selected_currencies)
+
+    if query:
+        qs = qs.filter(booking_text__icontains=query)
+
+    if category:
+        qs = qs.filter(category__iexact=category)
+
+    if amount:
+        try:
+            amount_val = float(amount)
+            # Search for exact amount match (approximate for float)
+            qs = qs.filter(amount__range=(amount_val - 0.05, amount_val + 0.05))
+        except ValueError:
+            pass
+
+    transactions = [
+        {
+            "id": t.id,
+            "date": t.date,
+            "booking_text": t.booking_text,
+            "category": t.category if t.category else "Uncounted",
+            "amount": float(t.amount) if t.amount else 0.0,
+            "currency": t.currency if t.currency else "",
+        }
+        for t in qs[:100]  # Limit results
+    ]
+
+    return JsonResponse({"success": True, "transactions": transactions})
 
 
 @csrf_exempt

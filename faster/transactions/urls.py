@@ -15,6 +15,11 @@ urlpatterns = [
     # API endpoints
     path("api/transactions/", views.api_get_transactions, name="api_get_transactions"),
     path(
+        "api/transactions/search/",
+        views.api_search_transactions,
+        name="api_search_transactions",
+    ),  # Search endpoint
+    path(
         "api/transactions/<int:transaction_id>/update-category/",
         views.api_update_category,
         name="api_update_category",

@@ -1,0 +1,1134 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% csrf_token %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="mb-8">
+  <h1 class="text-4xl font-bold text-gray-900 mb-2">
+    <i class="bi text-indigo-600"></i>
+    Financial Dashboard
+  </h1>
+  <p class="text-gray-600">
+    Track your income, expenses, and financial insights at a glance
+  </p>
+</div>
+
+<!-- Summary Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+  <!-- Total Expenses Card -->
+  <div
+    class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500 hover:shadow-xl transition duration-300"
+  >
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-600 uppercase">Top Expense</p>
+        {% if top_spending %}
+          <p class="text-3xl font-bold text-gray-900 mt-2">
+            {{ top_spending.0.total|floatformat:0|intcomma }}
+            <span class="text-base text-gray-500">
+              {% for currency, amount in top_spending.0.currencies.items %}
+                {{ currency }}{% if not forloop.last %}/{% endif %}
+              {% endfor %}
+            </span>
+          </p>
+          <p class="text-xs text-gray-500 mt-1">{{ top_spending.0.category }}</p>
+        {% else %}
+          <p class="text-3xl font-bold text-gray-400 mt-2">-</p>
+        {% endif %}
+      </div>
+      <div class="bg-red-100 rounded-full p-3">
+        <i class="bi bi-arrow-down-circle text-red-600 text-2xl"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Income Card -->
+  <div
+    class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-xl transition duration-300"
+  >
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-600 uppercase">Top Income</p>
+        {% if top_income %}
+          <p class="text-3xl font-bold text-gray-900 mt-2">
+            {{ top_income.0.total|floatformat:0|intcomma }}
+            <span class="text-base text-gray-500">
+              {% for currency, amount in top_income.0.currencies.items %}
+                {{ currency }}{% if not forloop.last %}/{% endif %}
+              {% endfor %}
+            </span>
+          </p>
+          <p class="text-xs text-gray-500 mt-1">{{ top_income.0.category }}</p>
+        {% else %}
+          <p class="text-3xl font-bold text-gray-400 mt-2">-</p>
+        {% endif %}
+      </div>
+      <div class="bg-green-100 rounded-full p-3">
+        <i class="bi bi-arrow-up-circle text-green-600 text-2xl"></i>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Month by Month Comparison Chart -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+  <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4 flex justify-between items-center">
+    <h2 class="text-xl font-bold text-white flex items-center">
+      <i class="bi bi-graph-up mr-2"></i>
+      Monthly Income vs Expenses
+    </h2>
+    <div class="flex items-center space-x-4">
+      <!-- Chart Type Toggle -->
+      <div class="flex space-x-2 bg-blue-600 rounded-lg p-1">
+        <button 
+          id="chartTypeLineBtn" 
+          class="px-3 py-1 rounded text-sm font-semibold text-white bg-blue-700 transition"
+          onclick="switchChartType('line')"
+        >
+          <i class="bi bi-graph-up mr-1"></i>Line
+        </button>
+        <button 
+          id="chartTypeBarBtn" 
+          class="px-3 py-1 rounded text-sm font-semibold text-blue-200 hover:bg-blue-600 transition"
+          onclick="switchChartType('bar')"
+        >
+          <i class="bi bi-bar-chart mr-1"></i>Bar
+        </button>
+      </div>
+      
+      <!-- Year Selector -->
+      <select 
+        id="yearSelector" 
+        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onchange="switchYear(this.value)"
+      >
+        <option value="">All Years</option>
+        <!-- Year options will be populated by JavaScript -->
+      </select>
+    </div>
+  </div>
+  <div class="p-6">
+    <div class="relative" style="height: 400px; position: relative;">
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Top Spending Categories -->
+    <div
+      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+    >
+      <div class="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-pie-chart-fill mr-2"></i>
+          Top Spending Categories
+        </h2>
+      </div>
+      <div class="p-6">
+        {% if top_spending %}
+          <div class="flex justify-center mb-6">
+            <div class="w-80 h-80">
+              <canvas id="spendingPieChart"></canvas>
+            </div>
+          </div>
+          <div class="space-y-2">
+            {% for item in top_spending %}
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <div class="w-4 h-4 rounded-full" style="background-color: {{ item.color }}"></div>
+                  <p class="font-medium text-gray-900 text-sm">{{ item.category }}</p>
+                </div>
+                <p class="text-sm font-bold text-gray-700">
+                  {{ item.total|floatformat:2|intcomma }}
+                  <span class="text-xs text-gray-500"> 
+                    {% for currency, amount in item.currencies.items %}
+                      {{ currency }}{% if not forloop.last %}/{% endif %}
+                    {% endfor %}
+                  </span>
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-12">
+            <i class="bi bi-inbox text-gray-300 text-5xl"></i>
+            <p class="text-gray-500 mt-4">No expense data available</p>
+            <p class="text-sm text-gray-400 mt-2">
+              Upload your bank statements to get started
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Top Income Categories -->
+    <div
+      class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
+    >
+      <div class="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
+        <h2 class="text-xl font-bold text-white flex items-center">
+          <i class="bi bi-pie-chart-fill mr-2"></i>
+          Top Income Categories
+        </h2>
+      </div>
+      <div class="p-6">
+        {% if top_income %}
+          <div class="flex justify-center mb-6">
+            <div class="w-80 h-80">
+              <canvas id="incomePieChart"></canvas>
+            </div>
+          </div>
+          <div class="space-y-2">
+            {% for item in top_income %}
+              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-3">
+                  <div class="w-4 h-4 rounded-full" style="background-color: {{ item.color }}"></div>
+                  <p class="font-medium text-gray-900 text-sm">{{ item.category }}</p>
+                </div>
+                <p class="text-sm font-bold text-gray-700">
+                  {{ item.total|floatformat:2|intcomma }}
+                  <span class="text-xs text-gray-500">
+                    {% for currency, amount in item.currencies.items %}
+                      {{ currency }}{% if not forloop.last %}/{% endif %}
+                    {% endfor %}
+                  </span>
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-12">
+            <i class="bi bi-inbox text-gray-300 text-5xl"></i>
+          <p class="text-gray-500 mt-4">No income data available</p>
+          <p class="text-sm text-gray-400 mt-2">
+            Upload your bank statements to get started
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Quick Actions -->
+  <div
+    class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-8 text-white mb-8"
+  >
+    <div class="flex flex-col md:flex-row items-center justify-between">
+      <div class="mb-4 md:mb-0">
+        <h3 class="text-2xl font-bold mb-2">Ready to analyze more?</h3>
+        <p class="text-indigo-100">
+          Upload bank statements, manage filters, and explore detailed analytics
+        </p>
+      </div>
+      <div class="flex space-x-4">
+        <a
+          href="{% url 'settings' %}"
+          class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition duration-200 flex items-center space-x-2"
+        >
+          <i class="bi bi-upload"></i>
+          <span>Upload Data</span>
+        </a>
+        <a
+          href="/expenses-vs-income/"
+          class="bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-800 transition duration-200 flex items-center space-x-2"
+        >
+          <i class="bi bi-graph-up"></i>
+          <span>View Analytics</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  
+<!-- Compact Time Filter (Bottom Right) -->
+<div class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-40">
+  <div class="flex flex-col gap-2">
+    <div class="text-xs font-semibold text-gray-600 mb-1">
+      <i class="bi bi-calendar-range text-indigo-600"></i> Time Period
+    </div>
+    
+    <div class="flex flex-col gap-1">
+      <button
+        type="button"
+        onclick="setTimeFilter('all')"
+        id="filter-all"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white"
+      >
+        All Time
+      </button>
+      <button
+        type="button"
+        onclick="setTimeFilter('last_year')"
+        id="filter-last_year"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      >
+        Last Year
+      </button>
+      <button
+        type="button"
+        onclick="toggleCustomDateRange()"
+        id="filter-custom"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      >
+        Custom
+      </button>
+    </div>
+
+    <!-- Custom Date Range Inputs (Hidden by default) -->
+    <div id="customDateInputs" class="hidden mt-2 space-y-2">
+      <input
+        type="date"
+        id="startDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+      <input
+        type="date"
+        id="endDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+      <button
+        type="button"
+        onclick="applyCustomDateRange()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium transition duration-200"
+      >
+        Apply
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Side Panel for Category Details -->
+<div id="categoryDetailPanel" class="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-50">
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div id="panelHeader" class="px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h3 id="panelTitle" class="text-xl font-bold text-gray-900"></h3>
+        <button onclick="closeCategoryPanel()" class="text-gray-500 hover:text-gray-700">
+          <i class="bi bi-x-lg text-2xl"></i>
+        </button>
+      </div>
+      <p id="panelAmount" class="text-2xl font-bold mt-2"></p>
+    </div>
+    
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto px-6 pb-6">
+      <div id="panelContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay -->
+<div id="panelOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40" onclick="closeCategoryPanel()"></div>
+
+<script>
+window.testFunction = function() {
+  console.log('Script is loading correctly!');
+  return true;
+};
+
+function setTimeFilter(period) {
+  console.log('setTimeFilter called with period:', period);
+  
+  // Update UI
+  document.querySelectorAll('.time-filter-btn').forEach(btn => {
+    btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+  });
+  document.getElementById('filter-' + period).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+  
+  // Hide custom inputs
+  document.getElementById('customDateInputs').classList.add('hidden');
+  
+  // Set session storage
+  sessionStorage.setItem('timeFilter', period);
+  sessionStorage.removeItem('customStartDate');
+  sessionStorage.removeItem('customEndDate');
+  
+  // Load data dynamically
+  console.log('Calling loadDashboardData with:', '?time_filter=' + period);
+  loadDashboardData('?time_filter=' + period);
+  loadMonthlyData('?time_filter=' + period);
+}
+
+function toggleCustomDateRange() {
+  const customInputs = document.getElementById('customDateInputs');
+  const isHidden = customInputs.classList.contains('hidden');
+  
+  if (isHidden) {
+    customInputs.classList.remove('hidden');
+    // Update button style
+    document.querySelectorAll('.time-filter-btn').forEach(btn => {
+      btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+    });
+    document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+  } else {
+    customInputs.classList.add('hidden');
+  }
+}
+
+function applyCustomDateRange() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  
+  if (!startDate || !endDate) {
+    alert('Please select both start and end dates');
+    return;
+  }
+  
+  // Set session storage
+  sessionStorage.setItem('timeFilter', 'custom');
+  sessionStorage.setItem('customStartDate', startDate);
+  sessionStorage.setItem('customEndDate', endDate);
+  
+  // Load data dynamically
+  const queryParams = '?time_filter=custom&start_date=' + startDate + '&end_date=' + endDate;
+  loadDashboardData(queryParams);
+  loadMonthlyData(queryParams);
+}
+
+// Dynamic data loading function
+function loadDashboardData(queryParams) {
+  console.log('loadDashboardData called with queryParams:', queryParams);
+  
+  const url = '/api/dashboard-data/' + queryParams;
+  console.log('Fetching URL:', url);
+  
+  fetch(url)
+    .then(response => {
+      console.log('Response status:', response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Response data:', data);
+      console.log('Top spending data:', data.top_spending);
+      console.log('Top income data:', data.top_income);
+      
+      if (data.success) {
+        console.log('Updating charts and lists...');
+        updateCharts(data.top_spending, data.top_income);
+        updateCategoryLists(data);
+      } else {
+        console.error('Failed to load dashboard data:', data.error);
+        alert('Failed to load data. Please try again.');
+      }
+    })
+    .catch(error => {
+      console.error('Error loading dashboard data:', error);
+      alert('Network error. Please check your connection and try again.');
+    });
+}
+
+// Update charts with new data
+function updateCharts(spendingData, incomeData) {
+  console.log('updateCharts called with spending data length:', spendingData ? spendingData.length : 'null');
+  console.log('updateCharts called with income data length:', incomeData ? incomeData.length : 'null');
+  
+  // Destroy existing charts
+  if (window.spendingChart) {
+    window.spendingChart.destroy();
+    console.log('Destroyed existing spending chart');
+  }
+  if (window.incomeChart) {
+    window.incomeChart.destroy();
+    console.log('Destroyed existing income chart');
+  }
+  
+  // Small delay to ensure DOM is updated
+  setTimeout(() => {
+    console.log('Creating charts after DOM update delay...');
+    
+    // Recreate spending chart
+    if (spendingData && spendingData.length > 0) {
+      console.log('Looking for spending canvas...');
+      const spendingCanvas = document.getElementById('spendingPieChart');
+      console.log('Spending canvas found:', spendingCanvas);
+      if (spendingCanvas) {
+        console.log('Creating spending chart with data:', spendingData);
+        const spendingCtx = spendingCanvas.getContext('2d');
+        window.spendingChart = new Chart(spendingCtx, {
+          type: 'pie',
+          data: {
+            labels: spendingData.map(item => item.category),
+            datasets: [{
+              data: spendingData.map(item => Math.abs(item.total)),
+              backgroundColor: spendingData.map(item => item.color),
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const value = context.raw;
+                    return context.label + ': ' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' CHF';
+                  }
+                }
+              }
+            }
+          }
+        });
+        console.log('Spending chart created successfully');
+      } else {
+        console.log('Spending canvas not found!');
+      }
+    }
+    
+    // Recreate income chart
+    if (incomeData && incomeData.length > 0) {
+      console.log('Looking for income canvas...');
+      const incomeCanvas = document.getElementById('incomePieChart');
+      console.log('Income canvas found:', incomeCanvas);
+      if (incomeCanvas) {
+        console.log('Creating income chart with data:', incomeData);
+        const incomeCtx = incomeCanvas.getContext('2d');
+        window.incomeChart = new Chart(incomeCtx, {
+          type: 'pie',
+          data: {
+            labels: incomeData.map(item => item.category),
+            datasets: [{
+              data: incomeData.map(item => Math.abs(item.total)),
+              backgroundColor: incomeData.map(item => item.color),
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const value = context.raw;
+                    return context.label + ': ' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' CHF';
+                  }
+                }
+              }
+            }
+          }
+        });
+        console.log('Income chart created successfully');
+      } else {
+        console.log('Income canvas not found!');
+      }
+    }
+  }, 100); // 100ms delay to allow DOM update
+}
+
+// Update category lists in the UI
+function updateCategoryLists(data) {
+  console.log('updateCategoryLists called');
+  
+  // Update spending categories list
+  if (data.top_spending) {
+    console.log('Updating spending section with', data.top_spending.length, 'items');
+    updateCategorySection('spending', data.top_spending);
+  }
+  
+  // Update income categories list
+  if (data.top_income) {
+    console.log('Updating income section with', data.top_income.length, 'items');
+    updateCategorySection('income', data.top_income);
+  }
+}
+
+function updateCategorySection(type, categories) {
+  console.log('updateCategorySection called for type:', type, 'with', categories.length, 'categories');
+  
+  const sectionClass = type === 'spending' ? '.from-red-500' : '.from-green-500';
+  console.log('Looking for section with class:', sectionClass);
+  
+  const gradientElement = document.querySelector(sectionClass);
+  console.log('Gradient element found:', gradientElement);
+  
+  const section = gradientElement ? gradientElement.closest('.bg-white') : null;
+  console.log('Section found:', section);
+  
+  if (!section) {
+    console.log('No section found for type:', type);
+    return;
+  }
+  
+  const contentDiv = section.querySelector('.p-6');
+  console.log('Content div found:', contentDiv);
+  
+  if (!contentDiv) {
+    console.log('No content div found');
+    return;
+  }
+  
+  if (categories.length === 0) {
+    console.log('No categories, showing empty state');
+    // Show empty state
+    contentDiv.innerHTML = '<div class="text-center py-12"><i class="bi bi-inbox text-gray-300 text-5xl"></i><p class="text-gray-500 mt-4">No ' + type + ' data available</p><p class="text-sm text-gray-400 mt-2">Upload your bank statements to get started</p></div>';
+    return;
+  }
+  
+  console.log('Building HTML for', categories.length, 'categories');
+  
+  // Build the new HTML
+  const chartCanvasId = type === 'spending' ? 'spendingPieChart' : 'incomePieChart';
+  let html = '<div class="flex justify-center mb-6"><div class="w-80 h-80"><canvas id="' + chartCanvasId + '"></canvas></div></div><div class="space-y-2">';
+  
+  categories.forEach((item, index) => {
+    console.log('Processing category', index, ':', item.category, item.total);
+    const currencyList = Object.keys(item.currencies || {}).join('/') || 'CHF';
+    html += '<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div class="flex items-center space-x-3"><div class="w-4 h-4 rounded-full" style="background-color: ' + item.color + '"></div><p class="font-medium text-gray-900 text-sm">' + item.category + '</p></div><p class="text-sm font-bold text-gray-700">' + item.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '<span class="text-xs text-gray-500">' + currencyList + '</span></p></div>';
+  });
+  
+  html += '</div>';
+  
+  console.log('Setting innerHTML for', type, 'section');
+  console.log('HTML length:', html.length);
+  contentDiv.innerHTML = html;
+  console.log('innerHTML set successfully for', type);
+}
+
+// Global variables for monthly chart
+let originalMonthlyData = {};
+let currentChartType = 'line';
+let selectedYear = '';
+
+// Populate year selector
+function populateYearSelector() {
+  const years = new Set();
+  if (originalMonthlyData.labels) {
+    originalMonthlyData.labels.forEach(label => {
+      const year = label.split('-')[0];
+      if (year) years.add(year);
+    });
+  }
+  
+  const yearSelect = document.getElementById('yearSelector');
+  const sortedYears = Array.from(years).sort().reverse();
+  
+  sortedYears.forEach(year => {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    yearSelect.appendChild(option);
+  });
+}
+
+// Filter chart data by year
+function filterDataByYear(year) {
+  if (!year) {
+    return {
+      labels: originalMonthlyData.labels,
+      expenses: originalMonthlyData.expenses,
+      income: originalMonthlyData.income
+    };
+  }
+  
+  const filtered = {
+    labels: [],
+    expenses: [],
+    income: []
+  };
+  
+  originalMonthlyData.labels.forEach((label, index) => {
+    if (label.startsWith(year)) {
+      filtered.labels.push(label);
+      filtered.expenses.push(originalMonthlyData.expenses[index]);
+      filtered.income.push(originalMonthlyData.income[index]);
+    }
+  });
+  
+  return filtered;
+}
+
+// Switch chart type
+function switchChartType(type) {
+  currentChartType = type;
+  
+  // Update button styling
+  const lineBtn = document.getElementById('chartTypeLineBtn');
+  const barBtn = document.getElementById('chartTypeBarBtn');
+  
+  if (type === 'line') {
+    lineBtn.classList.add('bg-blue-700');
+    lineBtn.classList.remove('text-blue-200', 'hover:bg-blue-600');
+    barBtn.classList.remove('bg-blue-700');
+    barBtn.classList.add('text-blue-200', 'hover:bg-blue-600');
+  } else {
+    barBtn.classList.add('bg-blue-700');
+    barBtn.classList.remove('text-blue-200', 'hover:bg-blue-600');
+    lineBtn.classList.remove('bg-blue-700');
+    lineBtn.classList.add('text-blue-200', 'hover:bg-blue-600');
+  }
+  
+  updateMonthlyChart();
+}
+
+// Switch year
+function switchYear(year) {
+  selectedYear = year;
+  updateMonthlyChart();
+}
+
+// Update monthly chart based on current type and year
+function updateMonthlyChart() {
+  const filteredData = filterDataByYear(selectedYear);
+  
+  if (window.monthlyChart && typeof window.monthlyChart.destroy === 'function') {
+    window.monthlyChart.destroy();
+  }
+  
+  const monthlyCtx = document.getElementById('monthlyChart');
+  if (!monthlyCtx) {
+    console.error('Monthly chart canvas element not found');
+    return;
+  }
+  
+  console.log('Creating chart with type:', currentChartType, 'year:', selectedYear, 'data points:', filteredData.labels.length);
+  
+  const chartConfig = {
+    type: currentChartType,
+    data: {
+      labels: filteredData.labels,
+      datasets: [
+        {
+          label: 'Expenses',
+          data: filteredData.expenses,
+          borderColor: 'rgb(239, 68, 68)',
+          backgroundColor: currentChartType === 'line' ? 'rgba(239, 68, 68, 0.1)' : 'rgb(239, 68, 68)',
+          borderWidth: currentChartType === 'line' ? 3 : 0,
+          fill: currentChartType === 'line',
+          tension: 0.4,
+          pointRadius: currentChartType === 'line' ? 5 : 0,
+          pointBackgroundColor: 'rgb(239, 68, 68)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointHoverRadius: 7
+        },
+        {
+          label: 'Income',
+          data: filteredData.income,
+          borderColor: 'rgb(34, 197, 94)',
+          backgroundColor: currentChartType === 'line' ? 'rgba(34, 197, 94, 0.1)' : 'rgb(34, 197, 94)',
+          borderWidth: currentChartType === 'line' ? 3 : 0,
+          fill: currentChartType === 'line',
+          tension: 0.4,
+          pointRadius: currentChartType === 'line' ? 5 : 0,
+          pointBackgroundColor: 'rgb(34, 197, 94)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointHoverRadius: 7
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 15,
+            font: { size: 12, weight: 'bold' }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: 12,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: function (context) {
+              return context.dataset.label + ': CHF ' + context.parsed.y.toFixed(2);
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          },
+          ticks: {
+            callback: function (value) {
+              return 'CHF ' + value.toFixed(0);
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  };
+  
+  window.monthlyChart = new Chart(monthlyCtx, chartConfig);
+}
+
+// Initialize the charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize spending chart
+  const spendingCtx = document.getElementById('spendingPieChart');
+  if (spendingCtx) {
+    const topSpendingData = JSON.parse('{{ top_spending_json|escapejs }}');
+    
+    window.spendingChart = new Chart(spendingCtx, {
+      type: 'doughnut',
+      data: {
+        labels: topSpendingData.map(item => item.category),
+        datasets: [{
+          data: topSpendingData.map(item => item.total),
+          backgroundColor: topSpendingData.map(item => item.color),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+  
+  // Initialize income chart
+  const incomeCtx = document.getElementById('incomePieChart');
+  if (incomeCtx) {
+    const topIncomeData = JSON.parse('{{ top_income_json|escapejs }}');
+    
+    window.incomeChart = new Chart(incomeCtx, {
+      type: 'doughnut',
+      data: {
+        labels: topIncomeData.map(item => item.category),
+        datasets: [{
+          data: topIncomeData.map(item => item.total),
+          backgroundColor: topIncomeData.map(item => item.color),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  // Store original monthly data for filtering (update global variable)
+  originalMonthlyData = JSON.parse('{{ monthly_chart_data|escapejs }}');
+  
+  console.log('Monthly data loaded:', originalMonthlyData);
+  // Convert Python list to JSON array for logging
+  var excludedCatsStr = '{{ excluded_categories | escapejs }}';
+  var excludedCats = [];
+  try {
+    // Parse the Python list representation to JavaScript array
+    excludedCats = JSON.parse(excludedCatsStr.replace(/'/g, '"'));
+  } catch (e) {
+    console.warn('Could not parse excluded categories:', excludedCatsStr);
+  }
+  console.log('Excluded categories from server:', excludedCats);
+  
+  // Validate data
+  if (!originalMonthlyData || !originalMonthlyData.labels || originalMonthlyData.labels.length === 0) {
+    console.error('No chart data available', originalMonthlyData);
+  }
+  
+  // Initialize time filter from URL or session storage
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlTimeFilter = urlParams.get('time_filter');
+  const urlStartDate = urlParams.get('start_date');
+  const urlEndDate = urlParams.get('end_date');
+  
+  let activeFilter = urlTimeFilter || sessionStorage.getItem('timeFilter') || 'all';
+  
+  // Populate year selector and initialize chart on page load
+  populateYearSelector();
+  updateMonthlyChart();
+  
+  // Update button styles
+  document.querySelectorAll('.time-filter-btn').forEach(btn => {
+    btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
+  });
+  
+  if (activeFilter === 'custom') {
+    const startDate = urlStartDate || sessionStorage.getItem('customStartDate');
+    const endDate = urlEndDate || sessionStorage.getItem('customEndDate');
+    if (startDate && endDate) {
+      document.getElementById('startDate').value = startDate;
+      document.getElementById('endDate').value = endDate;
+      document.getElementById('customDateInputs').classList.remove('hidden');
+      document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+      
+      // Save to session storage
+      sessionStorage.setItem('customStartDate', startDate);
+      sessionStorage.setItem('customEndDate', endDate);
+    }
+  } else {
+    document.getElementById('filter-' + activeFilter).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
+  }
+  
+  // Save active filter to session
+  sessionStorage.setItem('timeFilter', activeFilter);
+});
+
+  function closeCategoryPanel() {
+    document.getElementById('categoryDetailPanel').classList.add('translate-x-full');
+    document.getElementById('panelOverlay').classList.add('hidden');
+  }
+
+  function showCategoryPanel(category, amount, currency, type) {
+    const panel = document.getElementById('categoryDetailPanel');
+    const overlay = document.getElementById('panelOverlay');
+    const header = document.getElementById('panelHeader');
+    
+    // Set header color based on type
+    if (type === 'spending') {
+      header.className = 'px-6 py-4 bg-gradient-to-r from-red-500 to-pink-600 text-white';
+    } else {
+      header.className = 'px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white';
+    }
+    
+    // Update panel content
+    document.getElementById('panelTitle').textContent = category;
+    document.getElementById('panelAmount').textContent = `${amount.toLocaleString()} ${currency}`;
+    
+    // Show loading state
+    document.getElementById('panelContent').innerHTML = `
+      <div class="flex justify-center items-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    `;
+    
+    // Show panel
+    panel.classList.remove('translate-x-full');
+    overlay.classList.remove('hidden');
+    
+    // Fetch transactions for this category
+    fetch(`/api/transactions/?category=${encodeURIComponent(category)}`)
+      .then(response => response.json())
+      .then(data => {
+        const transactions = data.transactions;
+        let html = `
+          <h4 class="font-semibold text-gray-900 mb-3">Recent Transactions</h4>
+          <div class="space-y-2">
+        `;
+        
+        if (transactions.length === 0) {
+          html += '<p class="text-gray-500 text-sm">No transactions found</p>';
+        } else {
+          transactions.slice(0, 20).forEach(t => {
+            html += `
+              <div class="border-b border-gray-200 pb-2">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900">${t.booking_text || 'N/A'}</p>
+                    <p class="text-xs text-gray-500">${t.date}</p>
+                  </div>
+                  <p class="text-sm font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${t.amount.toLocaleString()} ${t.currency}
+                  </p>
+                </div>
+              </div>
+            `;
+          });
+          
+          if (transactions.length > 20) {
+            html += `<p class="text-xs text-gray-500 mt-3">Showing 20 of ${transactions.length} transactions</p>`;
+          }
+        }
+        
+        html += '</div>';
+        document.getElementById('panelContent').innerHTML = html;
+      })
+      .catch(error => {
+        console.error('Error fetching transactions:', error);
+        document.getElementById('panelContent').innerHTML = `
+          <p class="text-red-600 text-sm">Error loading transactions</p>
+        `;
+      });
+  }
+
+  // Dynamic data loading function
+  function loadDashboardData(queryParams) {
+    console.log('loadDashboardData called with queryParams:', queryParams);
+    
+    const url = '/api/dashboard-data/' + queryParams;
+    console.log('Fetching URL:', url);
+    
+    fetch(url)
+      .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+          updateCharts(data);
+          updateCategoryLists(data);
+        } else {
+          console.error('Failed to load dashboard data:', data.error);
+          alert('Failed to load data. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error loading dashboard data:', error);
+        alert('Network error. Please check your connection and try again.');
+      });
+  }
+
+  // Load monthly expenses vs income data
+  function loadMonthlyData(queryParams) {
+    console.log('loadMonthlyData called with queryParams:', queryParams);
+    
+    const url = '/api/dashboard-monthly-data/' + queryParams;
+    console.log('Fetching monthly URL:', url);
+    
+    fetch(url)
+      .then(response => {
+        console.log('Monthly response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Monthly response data:', data);
+        if (data.success) {
+          updateMonthlyChartWithData(data);
+        } else {
+          console.error('Failed to load monthly data:', data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading monthly data:', error);
+      });
+  }
+
+  // Update monthly chart with new data from API
+  function updateMonthlyChartWithData(data) {
+    if (window.monthlyChart && data.chart_data) {
+      window.monthlyChart.data.labels = data.chart_data.labels;
+      window.monthlyChart.data.datasets[0].data = data.chart_data.expenses;
+      window.monthlyChart.data.datasets[1].data = data.chart_data.income;
+      window.monthlyChart.update('active');
+    }
+  }
+
+  // Update charts with new data
+  function updateCharts(data) {
+    // Update spending chart
+    if (window.spendingChart && data.top_spending) {
+      const spendingLabels = data.top_spending.map(item => item.category);
+      const spendingAmounts = data.top_spending.map(item => item.total);
+      const spendingColors = data.top_spending.map(item => item.color);
+      
+      window.spendingChart.data.labels = spendingLabels;
+      window.spendingChart.data.datasets[0].data = spendingAmounts;
+      window.spendingChart.data.datasets[0].backgroundColor = spendingColors;
+      window.spendingChart.update('active');
+    }
+    
+    // Update income chart
+    if (window.incomeChart && data.top_income) {
+      const incomeLabels = data.top_income.map(item => item.category);
+      const incomeAmounts = data.top_income.map(item => item.total);
+      const incomeColors = data.top_income.map(item => item.color);
+      
+      window.incomeChart.data.labels = incomeLabels;
+      window.incomeChart.data.datasets[0].data = incomeAmounts;
+      window.incomeChart.data.datasets[0].backgroundColor = incomeColors;
+      window.incomeChart.update('active');
+    }
+  }
+
+  // Update category lists in the UI
+  function updateCategoryLists(data) {
+    // Update spending categories list
+    if (data.top_spending) {
+      updateCategorySection('spending', data.top_spending);
+    }
+    
+    // Update income categories list
+    if (data.top_income) {
+      updateCategorySection('income', data.top_income);
+    }
+  }
+
+  function updateCategorySection(type, categories) {
+    const sectionClass = type === 'spending' ? '.bg-gradient-to-r.from-red-500' : '.bg-gradient-to-r.from-green-500';
+    const section = document.querySelector(sectionClass)?.closest('.bg-white.rounded-xl');
+    
+    if (!section) return;
+    
+    const contentDiv = section.querySelector('.p-6');
+    if (!contentDiv) return;
+    
+    if (categories.length === 0) {
+      // Show empty state
+      contentDiv.innerHTML = `
+        <div class="text-center py-12">
+          <i class="bi bi-inbox text-gray-300 text-5xl"></i>
+          <p class="text-gray-500 mt-4">No ${type} data available</p>
+          <p class="text-sm text-gray-400 mt-2">Upload your bank statements to get started</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Build the new HTML
+    const chartCanvasId = type === 'spending' ? 'spendingPieChart' : 'incomePieChart';
+    let html = `
+      <div class="flex justify-center mb-6">
+        <div class="w-80 h-80">
+          <canvas id="${chartCanvasId}"></canvas>
+        </div>
+      </div>
+      <div class="space-y-2">
+    `;
+    
+    categories.forEach(item => {
+      const currencyList = Object.keys(item.currencies).join('/');
+      html += `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div class="flex items-center space-x-3">
+            <div class="w-4 h-4 rounded-full" style="background-color: ${item.color}"></div>
+            <p class="font-medium text-gray-900 text-sm">${item.category}</p>
+          </div>
+          <p class="text-sm font-bold text-gray-700">
+            ${item.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            <span class="text-xs text-gray-500">${currencyList}</span>
+          </p>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    contentDiv.innerHTML = html;
+  }
+
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard loaded');
+  });
+
+</script>
+
+{% endblock %}

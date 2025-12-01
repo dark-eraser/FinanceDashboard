@@ -2,62 +2,58 @@
 
 <!-- Header -->
 <div class="mb-8">
-  <h1 class="text-4xl font-bold text-gray-900 mb-2">
+  <h1 class="text-4xl font-bold  mb-2" style="color: var(--text-primary);">
     <i class="bi bi-cash-stack text-green-600"></i>
     Income by Category
   </h1>
-  <p class="text-gray-600">Track your income sources and analyze earning patterns</p>
+  <p class="" style="color: var(--text-secondary);">Track your income sources and analyze earning patterns</p>
 </div>
 
 <script>
-function setTimeFilter(period) {
+  function setTimeFilter(period) {
     // Update UI
     document.querySelectorAll('.time-filter-btn').forEach(btn => {
       btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
     });
     document.getElementById('filter-' + period).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
-    
+
     // Hide custom inputs
     document.getElementById('customDateInputs').classList.add('hidden');
-    
+
     // Set session storage
     sessionStorage.setItem('timeFilter', period);
     sessionStorage.removeItem('customStartDate');
     sessionStorage.removeItem('customEndDate');
-    
+
     // Load data dynamically instead of page reload
     loadIncomeData('?time_filter=' + period);
   }
 </script>
 
 <!-- Active Filters Banner -->
-<div
-  class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-lg shadow-sm"
->
+<div class="chart-header">
   <div class="flex items-center justify-between">
     <div class="flex items-center">
       <i class="bi bi-funnel-fill text-indigo-600 text-xl mr-3"></i>
       <div>
         <p class="font-semibold text-gray-800">Active Filters</p>
-        <p class="text-sm text-gray-600">
+        <p class="text-sm " style="color: var(--text-secondary);">
           {% if selected_file_ids %}
-            {{ selected_file_ids|length }} file(s) selected
+          {{ selected_file_ids|length }} file(s) selected
           {% else %}
-            All files
+          All files
           {% endif %}
           |
           {% if selected_currencies %}
-            {{ selected_currencies|join:", " }}
+          {{ selected_currencies|join:", " }}
           {% else %}
-            All currencies
+          All currencies
           {% endif %}
         </p>
       </div>
     </div>
-    <a
-      href="{% url 'settings' %}"
-      class="bg-white hover:bg-gray-50 text-indigo-700 px-4 py-2 rounded-lg font-semibold transition duration-200 flex items-center space-x-2 shadow-sm border border-indigo-200"
-    >
+    <a href="{% url 'settings' %}"
+      class="bg-white hover:bg-gray-100 text-indigo-700 px-4 py-2 rounded-lg font-semibold transition duration-200 flex items-center space-x-2 shadow-sm border border-indigo-200">
       <i class="bi bi-gear-fill"></i>
       <span>Change Filters</span>
     </a>
@@ -67,13 +63,9 @@ function setTimeFilter(period) {
 <!-- Chart and Category Filter Section -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
   <!-- Chart -->
-  <div
-    class="lg:col-span-2 bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition duration-300"
-  >
-    <div
-      class="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-3 -mx-6 -mt-6 mb-6 rounded-t-xl"
-    >
-      <h2 class="text-xl font-bold text-white flex items-center">
+  <div class="chart-container">
+    <div class="chart-header">
+      <h2 class="chart-title">
         <i class="bi bi-graph-up mr-2"></i>
         Income Overview
       </h2>
@@ -84,33 +76,21 @@ function setTimeFilter(period) {
   </div>
 
   <!-- Category Filters -->
-  <div
-    class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
-  >
-    <div class="bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-4">
-      <h2 class="text-xl font-bold text-white flex items-center">
+  <div class="chart-container">
+    <div class="chart-header">
+      <h2 class="chart-title">
         <i class="bi bi-tags-fill mr-2"></i>
         Show Categories
       </h2>
     </div>
     <div class="p-6 max-h-[400px] overflow-y-auto" id="category-checkboxes">
       {% for category, total in filtered_category_totals.items %}
-      <label
-        class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200 mb-2"
-      >
-        <input
-          class="w-4 h-4 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500 category-filter"
-          type="checkbox"
-          value="{{ category }}"
-          id="cat-{{ forloop.counter }}"
-          checked
-        />
-        <span class="ml-3 text-sm font-medium text-gray-900"
-          >{{ category }}</span
-        >
-        <span class="ml-auto text-xs font-semibold text-green-600"
-          >{{ total|floatformat:2 }}</span
-        >
+      <label class="flex items-center p-3  rounded-lg hover:bg-gray-100 cursor-pointer transition duration-200 mb-2"
+        style="background-color: var(--bg-secondary);">
+        <input class="w-4 h-4 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500 category-filter"
+          type="checkbox" value="{{ category }}" id="cat-{{ forloop.counter }}" checked />
+        <span class="ml-3 text-sm font-medium " style="color: var(--text-primary);">{{ category }}</span>
+        <span class="ml-auto text-xs font-semibold text-green-600">{{ total|floatformat:2 }}</span>
       </label>
       {% endfor %}
     </div>
@@ -118,12 +98,10 @@ function setTimeFilter(period) {
 </div>
 
 <!-- Category Totals Table -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-  <button
-    onclick="toggleSection('totals')"
-    class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-emerald-600 hover:to-teal-600 transition duration-200"
-  >
-    <h2 class="text-xl font-bold text-white flex items-center">
+<div class="chart-container">
+  <button onclick="toggleSection('totals')"
+    class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-emerald-600 hover:to-teal-600 transition duration-200">
+    <h2 class="chart-title">
       <i class="bi bi-list-ul mr-2"></i>
       Category Totals
     </h2>
@@ -131,40 +109,30 @@ function setTimeFilter(period) {
   </button>
   <div id="totals-content" class="p-6">
     <div class="overflow-x-auto">
-      <table
-        class="min-w-full divide-y divide-gray-200"
-        id="category-totals-table"
-      >
+      <table class="min-w-full divide-y divide-gray-200" id="category-totals-table">
         <thead>
-          <tr class="bg-gray-50">
-            <th
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+          <tr style="background-color: var(--bg-secondary);">
+            <th class="px-6 py-3 text-left text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Category
             </th>
-            <th
-              class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+            <th class="px-6 py-3 text-right text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Total Amount
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           {% for category, total in filtered_category_totals.items %}
-          <tr
-            data-category="{{ category }}"
-            class="hover:bg-gray-50 transition duration-200"
-          >
+          <tr data-category="{{ category }}" class="hover:bg-opacity-10"
+            style="background-color: var(--bg-secondary); transition duration-200">
             <td class="px-6 py-4 whitespace-nowrap">
               <span
-                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
-              >
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                 {{ category }}
               </span>
             </td>
-            <td
-              class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-green-600"
-            >
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-green-600">
               {{ total|floatformat:2 }} CHF
             </td>
           </tr>
@@ -176,83 +144,64 @@ function setTimeFilter(period) {
 </div>
 
 <!-- Transactions Table -->
-<div class="bg-white rounded-xl shadow-md overflow-hidden">
-  <button
-    onclick="toggleSection('transactions')"
-    class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-teal-600 hover:to-cyan-700 transition duration-200"
-  >
-    <h2 class="text-xl font-bold text-white flex items-center">
+<div class="chart-container">
+  <button onclick="toggleSection('transactions')"
+    class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 px-6 py-4 flex items-center justify-between cursor-pointer hover:from-teal-600 hover:to-cyan-700 transition duration-200">
+    <h2 class="chart-title">
       <i class="bi bi-receipt mr-2"></i>
       Transaction Details
     </h2>
-    <i
-      class="bi bi-chevron-right text-white text-xl"
-      id="transactions-icon"
-    ></i>
+    <i class="bi bi-chevron-right text-white text-xl" id="transactions-icon"></i>
   </button>
   <div id="transactions-content" class="p-6 hidden">
     <div class="overflow-x-auto">
-      <table
-        class="min-w-full divide-y divide-gray-200"
-        id="transactions-table"
-      >
+      <table class="min-w-full divide-y divide-gray-200" id="transactions-table">
         <thead>
-          <tr class="bg-gray-50">
-            <th
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+          <tr style="background-color: var(--bg-secondary);">
+            <th class="px-6 py-3 text-left text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Date
             </th>
-            <th
-              class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+            <th class="px-6 py-3 text-left text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Description
             </th>
-            <th
-              class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+            <th class="px-6 py-3 text-right text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Amount
             </th>
-            <th
-              class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+            <th class="px-6 py-3 text-center text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Currency
             </th>
-            <th
-              class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"
-            >
+            <th class="px-6 py-3 text-center text-xs font-semibold  uppercase tracking-wider"
+              style="color: var(--text-secondary);">
               Category
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           {% for tx in transactions %} {% if tx.Category != 'Uncounted' %}
-          <tr
-            data-category="{{ tx.Category }}"
-            class="hover:bg-gray-50 transition duration-200"
-          >
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          <tr data-category="{{ tx.Category }}" class="hover:bg-opacity-10"
+            style="background-color: var(--bg-secondary); transition duration-200">
+            <td class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--text-muted);">
               {{ tx.Date }}
             </td>
-            <td class="px-6 py-4 text-sm text-gray-900">
+            <td class="px-6 py-4 text-sm " style="color: var(--text-primary);">
               {{ tx.Booking_text }}
             </td>
-            <td
-              class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-green-600"
-            >
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-green-600">
               {{ tx.Amount|floatformat:2 }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
               <span
-                class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800"
-                >{{ tx.Currency }}</span
-              >
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">{{
+                tx.Currency }}</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
               <span
-                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
-                >{{ tx.Category }}</span
-              >
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">{{
+                tx.Category }}</span>
             </td>
           </tr>
           {% endif %} {% endfor %}
@@ -269,7 +218,7 @@ function setTimeFilter(period) {
   function toggleCustomDateRange() {
     const customInputs = document.getElementById('customDateInputs');
     const isHidden = customInputs.classList.contains('hidden');
-    
+
     if (isHidden) {
       customInputs.classList.remove('hidden');
       // Update button style
@@ -285,17 +234,17 @@ function setTimeFilter(period) {
   function applyCustomDateRange() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    
+
     if (!startDate || !endDate) {
       alert('Please select both start and end dates');
       return;
     }
-    
+
     // Set session storage
     sessionStorage.setItem('timeFilter', 'custom');
     sessionStorage.setItem('customStartDate', startDate);
     sessionStorage.setItem('customEndDate', endDate);
-    
+
     // Load data dynamically with custom dates
     loadIncomeData('?time_filter=custom&start_date=' + startDate + '&end_date=' + endDate);
   }
@@ -303,10 +252,10 @@ function setTimeFilter(period) {
   // Dynamic data loading function
   function loadIncomeData(queryParams) {
     console.log('loadIncomeData called with:', queryParams);
-    
+
     const url = '/api/income-by-category-data/' + queryParams;
     console.log('Fetching URL:', url);
-    
+
     fetch(url)
       .then(response => {
         console.log('Response status:', response.status);
@@ -336,20 +285,20 @@ function setTimeFilter(period) {
   }
 
   // Initialize filter on page load
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     // Check URL parameters first
     const urlParams = new URLSearchParams(window.location.search);
     const urlTimeFilter = urlParams.get('time_filter');
     const urlStartDate = urlParams.get('start_date');
     const urlEndDate = urlParams.get('end_date');
-    
+
     let activeFilter = urlTimeFilter || sessionStorage.getItem('timeFilter') || 'all';
-    
+
     // Update button styles
     document.querySelectorAll('.time-filter-btn').forEach(btn => {
       btn.className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300';
     });
-    
+
     if (activeFilter === 'custom') {
       const startDate = urlStartDate || sessionStorage.getItem('customStartDate');
       const endDate = urlEndDate || sessionStorage.getItem('customEndDate');
@@ -358,7 +307,7 @@ function setTimeFilter(period) {
         document.getElementById('endDate').value = endDate;
         document.getElementById('customDateInputs').classList.remove('hidden');
         document.getElementById('filter-custom').className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
-        
+
         // Save to session storage
         sessionStorage.setItem('customStartDate', startDate);
         sessionStorage.setItem('customEndDate', endDate);
@@ -366,7 +315,7 @@ function setTimeFilter(period) {
     } else {
       document.getElementById('filter-' + activeFilter).className = 'time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white';
     }
-    
+
     // Save active filter to session
     sessionStorage.setItem('timeFilter', activeFilter);
   });
@@ -519,54 +468,33 @@ function setTimeFilter(period) {
 <!-- Compact Time Filter (Bottom Right) -->
 <div class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-40">
   <div class="flex flex-col gap-2">
-    <div class="text-xs font-semibold text-gray-600 mb-1">
+    <div class="text-xs font-semibold  mb-1" style="color: var(--text-secondary);">
       <i class="bi bi-calendar-range text-indigo-600"></i> Time Period
     </div>
-    
+
     <div class="flex flex-col gap-1">
-      <button
-        type="button"
-        onclick="setTimeFilter('all')"
-        id="filter-all"
-        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white"
-      >
+      <button type="button" onclick="setTimeFilter('all')" id="filter-all"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-indigo-600 text-white">
         All Time
       </button>
-      <button
-        type="button"
-        onclick="setTimeFilter('last_year')"
-        id="filter-last_year"
-        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
-      >
+      <button type="button" onclick="setTimeFilter('last_year')" id="filter-last_year"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300">
         Last Year
       </button>
-      <button
-        type="button"
-        onclick="toggleCustomDateRange()"
-        id="filter-custom"
-        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
-      >
+      <button type="button" onclick="toggleCustomDateRange()" id="filter-custom"
+        class="time-filter-btn px-3 py-1.5 rounded text-xs font-medium transition duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300">
         Custom
       </button>
     </div>
 
     <!-- Custom Date Range Inputs (Hidden by default) -->
     <div id="customDateInputs" class="hidden mt-2 space-y-2">
-      <input
-        type="date"
-        id="startDate"
-        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      />
-      <input
-        type="date"
-        id="endDate"
-        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-      />
-      <button
-        type="button"
-        onclick="applyCustomDateRange()"
-        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium transition duration-200"
-      >
+      <input type="date" id="startDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+      <input type="date" id="endDate"
+        class="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+      <button type="button" onclick="applyCustomDateRange()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium transition duration-200">
         Apply
       </button>
     </div>
