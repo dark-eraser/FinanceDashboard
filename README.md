@@ -328,4 +328,4 @@ For enhanced merchant categorization:
 
 ## License
 
-MIT License (or specify your license)
+MIT License
